@@ -95,46 +95,52 @@ app.post('/api/auth/register', async (c) => {
 
 // POST /api/auth/login
 app.post('/api/auth/login', async (c) => {
-  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
-  const rl = await rateLimitMiddleware(c, `login:${ip}`, 10, 900);
-  if (rl) return rl;
+  try {
+    const ip = c.req.header('CF-Connecting-IP') || 'unknown';
+    const rl = await rateLimitMiddleware(c, `login:${ip}`, 10, 900);
+    if (rl) return rl;
 
-  const { email, password } = await c.req.json();
-  if (!email || !password) return c.json({ error: 'Email y contraseña requeridos' }, 400);
+    const body = await c.req.json();
+    const { email, password } = body;
+    if (!email || !password) return c.json({ error: 'Email y contraseña requeridos' }, 400);
 
-  const user = await c.env.DB.prepare(
-    'SELECT id,email,password_hash,nombre,apellido,role,failed_login_attempts,locked_until FROM users WHERE email=?'
-  ).bind(email.toLowerCase()).first();
+    const user = await c.env.DB.prepare(
+      'SELECT id,email,password_hash,nombre,apellido,role,failed_login_attempts,locked_until FROM users WHERE email=?'
+    ).bind(email.toLowerCase()).first();
 
-  if (!user) {
-    await logAudit(c.env.DB, null, 'login_failed', 'user', null, { email }, ip);
-    return c.json({ error: 'Credenciales inválidas' }, 401);
+    if (!user) {
+      await logAudit(c.env.DB, null, 'login_failed', 'user', null, { email }, ip);
+      return c.json({ error: 'Credenciales inválidas' }, 401);
+    }
+
+    // Check account lockout
+    if (user.locked_until && new Date(user.locked_until as string) > new Date()) {
+      return c.json({ error: 'Cuenta bloqueada temporalmente. Intenta más tarde.' }, 423);
+    }
+
+    const valid = await verifyPassword(password, user.password_hash as string);
+    if (!valid) {
+      const attempts = (user.failed_login_attempts as number || 0) + 1;
+      const lockUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
+      await c.env.DB.prepare('UPDATE users SET failed_login_attempts=?, locked_until=? WHERE id=?')
+        .bind(attempts, lockUntil, user.id).run();
+      await logAudit(c.env.DB, user.id as string, 'login_failed', 'user', user.id as string, { attempts }, ip);
+      return c.json({ error: 'Credenciales inválidas' }, 401);
+    }
+
+    // Reset failed attempts
+    await c.env.DB.prepare('UPDATE users SET failed_login_attempts=0, locked_until=NULL, last_login=datetime("now") WHERE id=?')
+      .bind(user.id).run();
+
+    const session = await createSession(c.env.DB, user.id as string, ip, c.req.header('User-Agent') || '');
+    await logAudit(c.env.DB, user.id as string, 'login', 'user', user.id as string, null, ip);
+
+    c.header('Set-Cookie', `session=${session.token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`);
+    return c.json({ ok: true, user: { id: user.id, email: user.email, nombre: user.nombre, apellido: user.apellido, role: user.role } });
+  } catch (err: any) {
+    console.error('Login error:', err);
+    return c.json({ error: 'Error interno', detail: err.message }, 500);
   }
-
-  // Check account lockout
-  if (user.locked_until && new Date(user.locked_until as string) > new Date()) {
-    return c.json({ error: 'Cuenta bloqueada temporalmente. Intenta más tarde.' }, 423);
-  }
-
-  const valid = await verifyPassword(password, user.password_hash as string);
-  if (!valid) {
-    const attempts = (user.failed_login_attempts as number || 0) + 1;
-    const lockUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
-    await c.env.DB.prepare('UPDATE users SET failed_login_attempts=?, locked_until=? WHERE id=?')
-      .bind(attempts, lockUntil, user.id).run();
-    await logAudit(c.env.DB, user.id as string, 'login_failed', 'user', user.id as string, { attempts }, ip);
-    return c.json({ error: 'Credenciales inválidas' }, 401);
-  }
-
-  // Reset failed attempts
-  await c.env.DB.prepare('UPDATE users SET failed_login_attempts=0, locked_until=NULL, last_login=datetime("now") WHERE id=?')
-    .bind(user.id).run();
-
-  const session = await createSession(c.env.DB, user.id as string, ip, c.req.header('User-Agent') || '');
-  await logAudit(c.env.DB, user.id as string, 'login', 'user', user.id as string, null, ip);
-
-  c.header('Set-Cookie', `session=${session.token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`);
-  return c.json({ ok: true, user: { id: user.id, email: user.email, nombre: user.nombre, apellido: user.apellido, role: user.role } });
 });
 
 // POST /api/auth/logout
@@ -385,6 +391,12 @@ app.post('/api/cases/:id/analyze', async (c) => {
 // ============================================================
 
 app.get('/api/health', (c) => c.json({ ok: true, env: c.env.ENVIRONMENT }));
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('Worker error:', err);
+  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+});
 
 // ============================================================
 // FALLBACK: serve static assets

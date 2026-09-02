@@ -1,0 +1,26 @@
+{
+  "name": "motor-analisis-forense",
+  "version": "1.0.0",
+  "description": "Motor de análisis forense de propósito general para expedientes legales. Ingiere documentos de cualquier caso (`.txt`, `.pdf`, imágenes), seudonimiza entidades, analiza con LLM, y genera reportes con hallazgos estructurados.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SebastianVernis/forensic-platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SebastianVernis/forensic-platform/issues"
+  },
+  "homepage": "https://github.com/SebastianVernis/forensic-platform#readme",
+  "dependencies": {
+    "hono": "^4.13.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260902.1"
+  }
+}

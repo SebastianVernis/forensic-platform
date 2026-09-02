@@ -1,5 +1,4 @@
-# Forensic Platform — Cloudflare Workers + Pages
-# Deploy: wrangler pages deploy frontend/ --project-name=forensic-platform
+# Forensic Platform — Cloudflare Workers
 
 name = "forensic-platform"
 main = "api/worker.ts"
@@ -10,7 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "forensic-platform-db"
-database_id = "REPLACE_WITH_ACTUAL_ID"
+database_id = "339d99da-fab4-4c74-a2b2-4cee23c4680f"
 
 # R2 Storage for documents
 [[r2_buckets]]
@@ -20,18 +19,16 @@ bucket_name = "forensic-platform-documents"
 # KV for sessions and rate limiting
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_ACTUAL_ID"
+id = "0b84d7b28cec4d66939634b383e71ea7"
 
 # Environment variables
 [vars]
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://forensic-platform.pages.dev"
 
-# Secrets (set via: wrangler secret put <name>)
-# JWT_SECRET        - Session signing key (64 random bytes, base64)
-# ENCRYPTION_KEY    - AES-256-GCM key for API key encryption
-# TURNSTILE_SECRET  - Cloudflare Turnstile CAPTCHA secret
-
-# Static assets served by Pages
-[site]
-bucket = "./frontend"
+# Static assets (Workers Static Assets — new approach)
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"

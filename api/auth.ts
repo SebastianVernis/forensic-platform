@@ -20,10 +20,10 @@ export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
-  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-512' }, keyMaterial, 512);
+  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-512' }, keyMaterial, 512);
   const hashB64 = btoa(String.fromCharCode(...new Uint8Array(hash)));
   const saltB64 = btoa(String.fromCharCode(...salt));
-  return `pbkdf2:600000:${saltB64}:${hashB64}`;
+  return `pbkdf2:100000:${saltB64}:${hashB64}`;
 }
 
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
