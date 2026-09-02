@@ -1,0 +1,37 @@
+# Forensic Platform — Cloudflare Workers + Pages
+# Deploy: wrangler pages deploy frontend/ --project-name=forensic-platform
+
+name = "forensic-platform"
+main = "api/worker.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "forensic-platform-db"
+database_id = "REPLACE_WITH_ACTUAL_ID"
+
+# R2 Storage for documents
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "forensic-platform-documents"
+
+# KV for sessions and rate limiting
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_ACTUAL_ID"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://forensic-platform.pages.dev"
+
+# Secrets (set via: wrangler secret put <name>)
+# JWT_SECRET        - Session signing key (64 random bytes, base64)
+# ENCRYPTION_KEY    - AES-256-GCM key for API key encryption
+# TURNSTILE_SECRET  - Cloudflare Turnstile CAPTCHA secret
+
+# Static assets served by Pages
+[site]
+bucket = "./frontend"

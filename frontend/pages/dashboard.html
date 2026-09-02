@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mis casos — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .dashboard-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .dashboard-main {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .dashboard-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-header h1 { font-size: 1.5rem; }
+
+    .dashboard-content { padding: 32px; }
+
+    .cases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .case-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .case-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+
+    .case-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .case-card h3 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .case-card .case-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .case-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .case-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .case-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .case-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .case-actions button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      transition: all 0.15s;
+    }
+
+    .case-actions button:hover { color: var(--text-primary); background: var(--bg-primary); }
+
+    .new-case-card {
+      background: transparent;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+
+    .new-case-card:hover {
+      border-color: var(--accent);
+      color: var(--text-accent);
+    }
+
+    .new-case-card .icon { font-size: 2rem; margin-bottom: 8px; }
+    .new-case-card span { font-size: 0.9rem; font-weight: 600; }
+
+    .shared-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .filter-bar .form-input { max-width: 300px; }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+      margin-top: 32px;
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    /* Sidebar nav */
+    .sidebar-nav { margin-top: 8px; }
+    .sidebar-nav .sidebar-item { margin-bottom: 2px; }
+    .sidebar-nav .sidebar-item .icon { width: 20px; text-align: center; }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .user-menu-btn:hover { border-color: var(--text-muted); }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: white;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      min-width: 200px;
+      box-shadow: var(--shadow-lg);
+      display: none;
+      z-index: 200;
+    }
+
+    .user-dropdown.active { display: block; }
+
+    .user-dropdown a {
+      display: block;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .user-dropdown a:hover { background: var(--bg-primary); color: var(--text-primary); }
+    .user-dropdown hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="/pages/dashboard.html" class="navbar-brand" style="margin-bottom:24px;">
+        <div class="logo">FA</div>
+        <span>ForensicAI</span>
+      </a>
+
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Navegación</div>
+          <a href="/pages/dashboard.html" class="sidebar-item active">
+            <span class="icon">📁</span> Mis casos
+          </a>
+          <a href="/pages/dashboard.html#shared" class="sidebar-item">
+            <span class="icon">👥</span> Compartidos conmigo
+            <span class="count" id="shared-count">0</span>
+          </a>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-title">Cuenta</div>
+          <a href="/pages/account.html" class="sidebar-item">
+            <span class="icon">⚙️</span> Configuración
+          </a>
+          <a href="#" class="sidebar-item" id="logout-btn">
+            <span class="icon">🚪</span> Cerrar sesión
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="dashboard-main">
+      <div class="dashboard-header">
+        <h1>Mis casos</h1>
+        <div class="user-menu">
+          <button class="user-menu-btn" id="user-menu-btn">
+            <div class="user-avatar" id="user-avatar">?</div>
+            <span id="user-name">Cargando...</span>
+            <span>▾</span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <a href="/pages/account.html">⚙️ Mi cuenta</a>
+            <hr>
+            <a href="#" id="logout-btn-dropdown">🚪 Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+        <!-- My cases -->
+        <div class="section-title">Mis casos</div>
+        <div class="filter-bar">
+          <input type="text" class="form-input" placeholder="Buscar caso..." id="search-cases">
+          <select class="form-input" id="filter-status" style="max-width:160px;">
+            <option value="all">Todos</option>
+            <option value="active">Activos</option>
+            <option value="archived">Archivados</option>
+          </select>
+        </div>
+
+        <div class="cases-grid" id="my-cases">
+          <!-- New case card -->
+          <div class="new-case-card" id="new-case-btn">
+            <div class="icon">+</div>
+            <span>Crear nuevo caso</span>
+          </div>
+          <!-- Cases loaded dynamically -->
+        </div>
+
+        <!-- Shared with me -->
+        <div class="section-title" id="shared">Compartidos conmigo</div>
+        <div class="cases-grid" id="shared-cases">
+          <div class="empty-state" style="grid-column: 1/-1;">
+            <div class="icon">👥</div>
+            <h3>Nadie ha compartido casos contigo</h3>
+            <p class="text-muted">Cuando alguien comparta un caso, aparecerá aquí.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- New Case Modal -->
+  <div class="modal-overlay" id="new-case-modal">
+    <div class="modal">
+      <div class="modal-title">Crear nuevo caso</div>
+      <form id="new-case-form">
+        <div class="form-group">
+          <label class="form-label" for="case-name">Nombre del caso *</label>
+          <input type="text" id="case-name" class="form-input" placeholder="Ej: Caso García López 2026" required maxlength="200">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="case-desc">Descripción</label>
+          <textarea id="case-desc" class="form-input" placeholder="Descripción breve del caso..." maxlength="1000" rows="3"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancel-new-case">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear caso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Share Case Modal -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal">
+      <div class="modal-title">Compartir caso</div>
+      <form id="share-form">
+        <div class="form-group">
+          <label class="form-label" for="share-email">Correo del usuario</label>
+          <input type="email" id="share-email" class="form-input" placeholder="usuario@correo.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="share-permission">Permiso</label>
+          <select id="share-permission" class="form-input">
+            <option value="read">Solo lectura</option>
+            <option value="write">Lectura y escritura</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <input type="hidden" id="share-case-id">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancel-share">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Compartir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // Dashboard Logic
+    // ============================================================
+
+    // Auth check
+    let currentUser = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Not authenticated');
+        currentUser = await res.json();
+        document.getElementById('user-name').textContent = currentUser.nombre || currentUser.email;
+        document.getElementById('user-avatar').textContent = (currentUser.nombre || '?')[0].toUpperCase();
+        return true;
+      } catch (e) {
+        window.location.href = '/pages/login.html';
+        return false;
+      }
+    }
+
+    // Load cases
+    async function loadCases() {
+      try {
+        const res = await fetch('/api/cases', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Failed to load cases');
+        const data = await res.json();
+        renderMyCases(data.owned || []);
+        renderSharedCases(data.shared || []);
+      } catch (e) {
+        console.error('Error loading cases:', e);
+      }
+    }
+
+    function renderMyCases(cases) {
+      const grid = document.getElementById('my-cases');
+      const newCaseCard = document.getElementById('new-case-btn');
+      grid.innerHTML = '';
+      grid.appendChild(newCaseCard);
+
+      if (cases.length === 0) {
+        return;
+      }
+
+      cases.forEach(c => {
+        grid.appendChild(createCaseCard(c, false));
+      });
+    }
+
+    function renderSharedCases(cases) {
+      const grid = document.getElementById('shared-cases');
+      document.getElementById('shared-count').textContent = cases.length;
+
+      if (cases.length === 0) return;
+
+      grid.innerHTML = '';
+      cases.forEach(c => {
+        grid.appendChild(createCaseCard(c, true));
+      });
+    }
+
+    function createCaseCard(caseData, isShared) {
+      const card = document.createElement('div');
+      card.className = 'case-card';
+      card.innerHTML = `
+        ${isShared ? '<div class="shared-badge"><span class="badge badge-info">Compartido</span></div>' : ''}
+        <div class="case-card-header">
+          <div>
+            <h3>${escapeHtml(caseData.name)}</h3>
+            <span class="badge ${caseData.status === 'active' ? 'badge-success' : 'badge-warning'}">${caseData.status === 'active' ? 'Activo' : 'Archivado'}</span>
+          </div>
+          <div class="case-actions">
+            ${!isShared ? `<button title="Compartir" data-action="share" data-id="${caseData.id}">🔗</button>` : ''}
+            <button title="Eliminar" data-action="delete" data-id="${caseData.id}">🗑️</button>
+          </div>
+        </div>
+        <div class="case-desc">${escapeHtml(caseData.description || 'Sin descripción')}</div>
+        <div class="case-card-footer">
+          <div class="case-meta">
+            <span>📄 ${caseData.document_count || 0} docs</span>
+            <span>🔍 ${caseData.result_count || 0} hallazgos</span>
+          </div>
+          <span class="text-xs text-muted">${formatDate(caseData.created_at)}</span>
+        </div>
+      `;
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.case-actions')) return;
+        window.location.href = `/pages/case.html?id=${caseData.id}`;
+      });
+      return card;
+    }
+
+    // New case
+    document.getElementById('new-case-btn').addEventListener('click', () => {
+      document.getElementById('new-case-modal').classList.add('active');
+    });
+
+    document.getElementById('cancel-new-case').addEventListener('click', () => {
+      document.getElementById('new-case-modal').classList.remove('active');
+    });
+
+    document.getElementById('new-case-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('case-name').value.trim();
+      const description = document.getElementById('case-desc').value.trim();
+
+      if (!name) return;
+
+      try {
+        const res = await fetch('/api/cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ name, description }),
+        });
+
+        if (res.ok) {
+          document.getElementById('new-case-modal').classList.remove('active');
+          document.getElementById('case-name').value = '';
+          document.getElementById('case-desc').value = '';
+          loadCases();
+        }
+      } catch (e) {
+        console.error('Error creating case:', e);
+      }
+    });
+
+    // Share case
+    function openShareModal(caseId) {
+      document.getElementById('share-case-id').value = caseId;
+      document.getElementById('share-modal').classList.add('active');
+    }
+
+    document.getElementById('cancel-share').addEventListener('click', () => {
+      document.getElementById('share-modal').classList.remove('active');
+    });
+
+    document.getElementById('share-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const caseId = document.getElementById('share-case-id').value;
+      const email = document.getElementById('share-email').value.trim();
+      const permission = document.getElementById('share-permission').value;
+
+      try {
+        const res = await fetch(`/api/cases/${caseId}/share`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email, permission }),
+        });
+
+        if (res.ok) {
+          document.getElementById('share-modal').classList.remove('active');
+          document.getElementById('share-email').value = '';
+          loadCases();
+        }
+      } catch (e) {
+        console.error('Error sharing case:', e);
+      }
+    });
+
+    // Delete case
+    async function deleteCase(caseId) {
+      if (!confirm('¿Estás seguro de eliminar este caso? Esta acción no se puede deshacer.')) return;
+
+      try {
+        await fetch(`/api/cases/${caseId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        loadCases();
+      } catch (e) {
+        console.error('Error deleting case:', e);
+      }
+    }
+
+    // Search/filter
+    document.getElementById('search-cases').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('#my-cases .case-card').forEach(card => {
+        const name = card.querySelector('h3')?.textContent.toLowerCase() || '';
+        const desc = card.querySelector('.case-desc')?.textContent.toLowerCase() || '';
+        card.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+      });
+    });
+
+    // User menu
+    document.getElementById('user-menu-btn').addEventListener('click', () => {
+      document.getElementById('user-dropdown').classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.user-menu')) {
+        document.getElementById('user-dropdown').classList.remove('active');
+      }
+    });
+
+    // Logout
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/pages/login.html';
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('logout-btn-dropdown').addEventListener('click', logout);
+
+    // Helpers
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    // Init
+    (async () => {
+      if (await checkAuth()) {
+        loadCases();
+      }
+    })();
+
+    // Event delegation for data-action buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (action === 'share') openShareModal(id);
+      if (action === 'delete') deleteCase(id);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Iniciar sesión — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+    }
+
+    .auth-page::before {
+      content: "";
+      position: absolute;
+      top: -200px;
+      left: -200px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .auth-header .logo {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+      margin: 0 auto 16px;
+    }
+
+    .auth-header h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    .auth-header p { color: var(--text-secondary); font-size: 0.9rem; }
+
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: var(--bg-primary);
+      border-radius: var(--radius-md);
+      padding: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 4px;
+    }
+
+    .password-toggle:hover { color: var(--text-primary); }
+
+    .form-group { position: relative; }
+
+    .password-strength {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .password-strength-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s, background 0.3s;
+      width: 0;
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .auth-footer a { color: var(--text-accent); }
+
+    .security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .security-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+
+    /* Register form hidden by default */
+    #register-form { display: none; }
+    #register-form.active { display: block; }
+    #login-form.hidden { display: none; }
+
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .alert-error {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+    }
+
+    .alert-success {
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #86efac;
+    }
+
+    .alert.visible { display: block; }
+
+    .loading-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .btn.loading .loading-spinner { display: inline-block; }
+    .btn.loading .btn-text { opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div class="logo">FA</div>
+        <h1>ForensicAI</h1>
+        <p>Accede a tu plataforma de análisis forense</p>
+      </div>
+
+      <div class="auth-card">
+        <!-- Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
+          <button class="auth-tab" data-tab="register">Crear cuenta</button>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert alert-error" id="alert-error"></div>
+        <div class="alert alert-success" id="alert-success"></div>
+
+        <!-- Login Form -->
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="login-email">Correo electrónico</label>
+            <input type="email" id="login-email" class="form-input" placeholder="tu@correo.com" required autocomplete="email" maxlength="254">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="login-password">Contraseña</label>
+            <div style="position:relative">
+              <input type="password" id="login-password" class="form-input" placeholder="Tu contraseña" required autocomplete="current-password" maxlength="128">
+              <button type="button" class="password-toggle" data-target="login-password">Mostrar</button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="remember-me" style="accent-color:var(--accent)">
+              Recordarme
+            </label>
+            <a href="#" style="font-size:0.85rem;">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">
+            <span class="loading-spinner"></span>
+            <span class="btn-text">Iniciar sesión</span>
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reg-nombre">Nombre</label>
+              <input type="text" id="reg-nombre" class="form-input" placeholder="Juan" required autocomplete="given-name" maxlength="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-apellido">Apellido</label>
+              <input type="text" id="reg-apellido" class="form-input" placeholder="Pérez" required autocomplete="family-name" maxlength="100">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reg-email">Correo electrónico</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="tu@correo.com" required autocomplete="email" maxlength="254">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reg-organizacion">Organización <span style="color:var(--text-muted)">(opcional)</span></label>
+            <input type="text" id="reg-organizacion" class="form-input" placeholder="Despacho jurídico, fiscalía, etc." maxlength="200">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reg-password">Contraseña</label>
+            <div style="position:relative">
+              <input type="password" id="reg-password" class="form-input" placeholder="Mínimo 12 caracteres" required autocomplete="new-password" maxlength="128">
+              <button type="button" class="password-toggle" data-target="reg-password">Mostrar</button>
+            </div>
+            <div class="password-strength"><div class="password-strength-bar" id="strength-bar"></div></div>
+            <div class="form-help" id="password-help">Mínimo 12 caracteres con mayúsculas, minúsculas, números y símbolos</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reg-password-confirm">Confirmar contraseña</label>
+            <div style="position:relative">
+              <input type="password" id="reg-password-confirm" class="form-input" placeholder="Repite tu contraseña" required autocomplete="new-password" maxlength="128">
+              <button type="button" class="password-toggle" data-target="reg-password-confirm">Mostrar</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.85rem; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="accept-terms" style="accent-color:var(--accent); margin-top:3px;">
+              <span>Acepto los <a href="#">términos de servicio</a> y la <a href="#">política de privacidad</a></span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="register-btn">
+            <span class="loading-spinner"></span>
+            <span class="btn-text">Crear cuenta</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="security-badge">
+        <span class="dot"></span>
+        <span>Conexión encriptada · PBKDF2-SHA512 · Sesiones seguras</span>
+      </div>
+
+      <div class="auth-footer">
+        <a href="/">← Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // Auth Page Logic
+    // ============================================================
+
+    // Tab switching
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        document.getElementById('login-form').classList.toggle('hidden', target !== 'login');
+        document.getElementById('register-form').classList.toggle('active', target === 'register');
+        hideAlerts();
+      });
+    });
+
+    // Password visibility toggle
+    document.querySelectorAll('.password-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.textContent = isPassword ? 'Ocultar' : 'Mostrar';
+      });
+    });
+
+    // Password strength meter
+    const regPassword = document.getElementById('reg-password');
+    const strengthBar = document.getElementById('strength-bar');
+    const passwordHelp = document.getElementById('password-help');
+
+    if (regPassword) {
+      regPassword.addEventListener('input', () => {
+        const val = regPassword.value;
+        let score = 0;
+        let feedback = [];
+
+        if (val.length >= 12) score++; else feedback.push('mínimo 12 caracteres');
+        if (/[a-z]/.test(val)) score++; else feedback.push('una minúscula');
+        if (/[A-Z]/.test(val)) score++; else feedback.push('una mayúscula');
+        if (/[0-9]/.test(val)) score++; else feedback.push('un número');
+        if (/[^a-zA-Z0-9]/.test(val)) score++; else feedback.push('un símbolo');
+
+        const colors = ['#ef4444', '#f59e0b', '#f59e0b', '#22c55e', '#22c55e'];
+        const widths = ['20%', '40%', '60%', '80%', '100%'];
+
+        strengthBar.style.width = val.length === 0 ? '0' : widths[score - 1] || '0';
+        strengthBar.style.background = val.length === 0 ? 'transparent' : colors[score - 1] || '#ef4444';
+
+        if (val.length === 0) {
+          passwordHelp.textContent = 'Mínimo 12 caracteres con mayúsculas, minúsculas, números y símbolos';
+        } else if (feedback.length > 0) {
+          passwordHelp.textContent = 'Falta: ' + feedback.join(', ');
+          passwordHelp.style.color = 'var(--warning)';
+        } else {
+          passwordHelp.textContent = 'Contraseña segura ✓';
+          passwordHelp.style.color = 'var(--success)';
+        }
+      });
+    }
+
+    // Alert helpers
+    function showAlert(type, message) {
+      hideAlerts();
+      const el = document.getElementById(`alert-${type}`);
+      el.textContent = message;
+      el.classList.add('visible');
+    }
+
+    function hideAlerts() {
+      document.querySelectorAll('.alert').forEach(a => a.classList.remove('visible'));
+    }
+
+    // CSRF token (double-submit cookie)
+    function generateCsrfToken() {
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function getCsrfToken() {
+      let token = document.cookie.split(';').find(c => c.trim().startsWith('csrf_token='));
+      if (token) return token.split('=')[1];
+      token = generateCsrfToken();
+      document.cookie = `csrf_token=${token}; Path=/; SameSite=Strict; Secure`;
+      return token;
+    }
+
+    // Login handler
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlerts();
+
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-btn');
+
+      if (!email || !password) {
+        showAlert('error', 'Completa todos los campos');
+        return;
+      }
+
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken(),
+          },
+          body: JSON.stringify({ email, password }),
+          credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert('success', 'Inicio de sesión exitoso. Redirigiendo...');
+          setTimeout(() => {
+            window.location.href = '/pages/dashboard.html';
+          }, 800);
+        } else {
+          showAlert('error', data.error || 'Credenciales inválidas');
+        }
+      } catch (err) {
+        showAlert('error', 'Error de conexión. Intenta de nuevo.');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+
+    // Register handler
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlerts();
+
+      const nombre = document.getElementById('reg-nombre').value.trim();
+      const apellido = document.getElementById('reg-apellido').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const organizacion = document.getElementById('reg-organizacion').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const passwordConfirm = document.getElementById('reg-password-confirm').value;
+      const acceptTerms = document.getElementById('accept-terms').checked;
+      const btn = document.getElementById('register-btn');
+
+      // Client-side validation
+      if (!nombre || !apellido || !email || !password || !passwordConfirm) {
+        showAlert('error', 'Completa todos los campos obligatorios');
+        return;
+      }
+
+      if (password !== passwordConfirm) {
+        showAlert('error', 'Las contraseñas no coinciden');
+        return;
+      }
+
+      if (password.length < 12) {
+        showAlert('error', 'La contraseña debe tener al menos 12 caracteres');
+        return;
+      }
+
+      if (!acceptTerms) {
+        showAlert('error', 'Debes aceptar los términos y la política de privacidad');
+        return;
+      }
+
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken(),
+          },
+          body: JSON.stringify({ nombre, apellido, email, organizacion, password }),
+          credentials: 'same-origin',
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert('success', 'Cuenta creada exitosamente. Redirigiendo...');
+          setTimeout(() => {
+            window.location.href = '/pages/dashboard.html';
+          }, 800);
+        } else {
+          showAlert('error', data.error || 'Error al crear la cuenta');
+        }
+      } catch (err) {
+        showAlert('error', 'Error de conexión. Intenta de nuevo.');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+
+    // Check if already logged in
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) {
+          window.location.href = '/pages/dashboard.html';
+        }
+      } catch (e) { /* not logged in */ }
+    })();
+  </script>
+</body>
+</html>

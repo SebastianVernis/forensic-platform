@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mi cuenta — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .account-layout { display: flex; min-height: 100vh; }
+    .account-main { flex: 1; overflow-y: auto; }
+    .account-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .account-content { padding: 32px; max-width: 700px; }
+
+    .account-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .account-section h3 {
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .profile-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .profile-info h2 { margin-bottom: 4px; }
+    .profile-info p { color: var(--text-secondary); font-size: 0.9rem; }
+
+    .sessions-list { margin-top: 16px; }
+
+    .session-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+    }
+
+    .session-item .device { flex: 1; }
+    .session-item .device-name { font-weight: 600; font-size: 0.9rem; }
+    .session-item .device-meta { font-size: 0.8rem; color: var(--text-muted); }
+    .session-item .current { font-size: 0.75rem; color: var(--success); font-weight: 600; }
+
+    .danger-zone {
+      border-color: rgba(239,68,68,0.3);
+    }
+
+    .danger-zone h3 { color: var(--danger); }
+
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .alert.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="account-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="/pages/dashboard.html" class="navbar-brand" style="margin-bottom:24px;">
+        <div class="logo">FA</div>
+        <span>ForensicAI</span>
+      </a>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Cuenta</div>
+        <a href="#profile" class="sidebar-item active" data-section="profile">
+          <span class="icon">👤</span> Perfil
+        </a>
+        <a href="#security" class="sidebar-item" data-section="security">
+          <span class="icon">🔒</span> Seguridad
+        </a>
+        <a href="#sessions" class="sidebar-item" data-section="sessions">
+          <span class="icon">💻</span> Sesiones activas
+        </a>
+      </div>
+      <div class="sidebar-section" style="margin-top:auto;">
+        <a href="/pages/dashboard.html" class="sidebar-item">
+          <span class="icon">📁</span> Mis casos
+        </a>
+        <a href="#" class="sidebar-item" id="logout-btn">
+          <span class="icon">🚪</span> Cerrar sesión
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="account-main">
+      <div class="account-header">
+        <h1>Mi cuenta</h1>
+        <a href="/pages/dashboard.html" class="btn btn-secondary btn-sm">← Volver al dashboard</a>
+      </div>
+
+      <div class="account-content">
+        <div class="alert alert-error" id="alert-error"></div>
+        <div class="alert alert-success" id="alert-success"></div>
+
+        <!-- Profile Section -->
+        <div class="account-section" id="section-profile">
+          <h3>👤 Datos personales</h3>
+          <div class="profile-header">
+            <div class="profile-avatar" id="profile-avatar">?</div>
+            <div class="profile-info">
+              <h2 id="profile-name">Cargando...</h2>
+              <p id="profile-email">...</p>
+              <p id="profile-org" class="text-muted text-sm"></p>
+            </div>
+          </div>
+
+          <form id="profile-form">
+            <div style="display:flex; gap:12px;">
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" for="nombre">Nombre</label>
+                <input type="text" id="nombre" class="form-input" maxlength="100">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" for="apellido">Apellido</label>
+                <input type="text" id="apellido" class="form-input" maxlength="100">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="telefono">Teléfono</label>
+              <input type="tel" id="telefono" class="form-input" maxlength="20">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="organizacion">Organización</label>
+              <input type="text" id="organizacion" class="form-input" maxlength="200" placeholder="Despacho jurídico, fiscalía, etc.">
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+          </form>
+        </div>
+
+        <!-- Security Section -->
+        <div class="account-section" id="section-security">
+          <h3>🔒 Cambiar contraseña</h3>
+          <form id="password-form">
+            <div class="form-group">
+              <label class="form-label" for="current-password">Contraseña actual</label>
+              <input type="password" id="current-password" class="form-input" autocomplete="current-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-password">Nueva contraseña</label>
+              <input type="password" id="new-password" class="form-input" autocomplete="new-password" maxlength="128">
+              <div class="form-help">Mínimo 12 caracteres con mayúsculas, minúsculas, números y símbolos</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="confirm-password">Confirmar nueva contraseña</label>
+              <input type="password" id="confirm-password" class="form-input" autocomplete="new-password" maxlength="128">
+            </div>
+            <button type="submit" class="btn btn-primary">Cambiar contraseña</button>
+          </form>
+        </div>
+
+        <!-- Sessions Section -->
+        <div class="account-section" id="section-sessions">
+          <h3>💻 Sesiones activas</h3>
+          <p class="text-sm text-muted" style="margin-bottom:16px;">Estas son las sesiones que tienen acceso a tu cuenta actualmente.</p>
+          <div class="sessions-list" id="sessions-list">
+            <div class="session-item">
+              <div class="device">
+                <div class="device-name">Cargando...</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm" id="revoke-all-btn" style="margin-top:16px;">Cerrar todas las demás sesiones</button>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="account-section danger-zone">
+          <h3>⚠️ Zona de peligro</h3>
+          <p class="text-sm text-muted" style="margin-bottom:16px;">Estas acciones son irreversibles.</p>
+          <button class="btn btn-danger" id="delete-account-btn">Eliminar mi cuenta</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ============================================================
+    // Account Page Logic
+    // ============================================================
+
+    let currentUser = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Not authenticated');
+        currentUser = await res.json();
+        renderProfile();
+        loadSessions();
+        return true;
+      } catch (e) {
+        window.location.href = '/pages/login.html';
+        return false;
+      }
+    }
+
+    function renderProfile() {
+      document.getElementById('profile-name').textContent = `${currentUser.nombre} ${currentUser.apellido}`;
+      document.getElementById('profile-email').textContent = currentUser.email;
+      document.getElementById('profile-org').textContent = currentUser.organizacion || '';
+      document.getElementById('profile-avatar').textContent = (currentUser.nombre || '?')[0].toUpperCase();
+      document.getElementById('nombre').value = currentUser.nombre || '';
+      document.getElementById('apellido').value = currentUser.apellido || '';
+      document.getElementById('telefono').value = currentUser.telefono || '';
+      document.getElementById('organizacion').value = currentUser.organizacion || '';
+    }
+
+    // Sidebar navigation
+    document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar-item[data-section]').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const section = item.dataset.section;
+        document.getElementById(`section-${section}`).scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    // Profile form
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlerts();
+      try {
+        const res = await fetch('/api/auth/me', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            nombre: document.getElementById('nombre').value.trim(),
+            apellido: document.getElementById('apellido').value.trim(),
+            telefono: document.getElementById('telefono').value.trim(),
+            organizacion: document.getElementById('organizacion').value.trim(),
+          }),
+        });
+        if (res.ok) {
+          showAlert('success', 'Perfil actualizado correctamente');
+          currentUser = await res.json();
+          renderProfile();
+        } else {
+          showAlert('error', 'Error al actualizar el perfil');
+        }
+      } catch (e) {
+        showAlert('error', 'Error de conexión');
+      }
+    });
+
+    // Password form
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlerts();
+      const current = document.getElementById('current-password').value;
+      const newPwd = document.getElementById('new-password').value;
+      const confirm = document.getElementById('confirm-password').value;
+
+      if (newPwd !== confirm) {
+        showAlert('error', 'Las contraseñas no coinciden');
+        return;
+      }
+      if (newPwd.length < 12) {
+        showAlert('error', 'La contraseña debe tener al menos 12 caracteres');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ current_password: current, new_password: newPwd }),
+        });
+        if (res.ok) {
+          showAlert('success', 'Contraseña cambiada correctamente');
+          document.getElementById('current-password').value = '';
+          document.getElementById('new-password').value = '';
+          document.getElementById('confirm-password').value = '';
+        } else {
+          const data = await res.json();
+          showAlert('error', data.error || 'Error al cambiar la contraseña');
+        }
+      } catch (e) {
+        showAlert('error', 'Error de conexión');
+      }
+    });
+
+    // Sessions
+    async function loadSessions() {
+      try {
+        const res = await fetch('/api/auth/sessions', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const sessions = await res.json();
+        const list = document.getElementById('sessions-list');
+        list.innerHTML = sessions.map(s => `
+          <div class="session-item">
+            <div class="device">
+              <div class="device-name">${escapeHtml(s.user_agent || 'Dispositivo desconocido')}</div>
+              <div class="device-meta">IP: ${s.ip_address || 'N/A'} · ${formatDate(s.created_at)}</div>
+            </div>
+            ${s.current ? '<span class="current">Sesión actual</span>' : `<button class="btn btn-ghost btn-sm" data-action="revoke" data-id="${s.id}">Cerrar</button>`}
+          </div>
+        `).join('');
+      } catch (e) { console.error('Error loading sessions:', e); }
+    }
+
+    async function revokeSession(sessionId) {
+      try {
+        await fetch(`/api/auth/sessions/${sessionId}`, { method: 'DELETE', credentials: 'same-origin' });
+        loadSessions();
+      } catch (e) { console.error('Error revoking session:', e); }
+    }
+
+    document.getElementById('revoke-all-btn').addEventListener('click', async () => {
+      if (!confirm('¿Cerrar todas las demás sesiones?')) return;
+      try {
+        await fetch('/api/auth/sessions', { method: 'DELETE', credentials: 'same-origin' });
+        loadSessions();
+        showAlert('success', 'Todas las demás sesiones han sido cerradas');
+      } catch (e) { showAlert('error', 'Error al cerrar sesiones'); }
+    });
+
+    // Delete account
+    document.getElementById('delete-account-btn').addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro? Esta acción eliminará tu cuenta y todos tus datos permanentemente.')) return;
+      if (!confirm('ÚLTIMA ADVERTENCIA: Esto no se puede deshacer. ¿Confirmar?')) return;
+      try {
+        await fetch('/api/auth/me', { method: 'DELETE', credentials: 'same-origin' });
+        window.location.href = '/';
+      } catch (e) { showAlert('error', 'Error al eliminar la cuenta'); }
+    });
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/pages/login.html';
+    });
+
+    // Helpers
+    function showAlert(type, message) {
+      hideAlerts();
+      const el = document.getElementById(`alert-${type}`);
+      el.textContent = message;
+      el.classList.add('visible');
+    }
+    function hideAlerts() {
+      document.querySelectorAll('.alert').forEach(a => a.classList.remove('visible'));
+    }
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+    function formatDate(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Init
+    checkAuth();
+
+    // Event delegation for data-action buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (action === 'revoke') revokeSession(id);
+    });
+  </script>
+</body>
+</html>

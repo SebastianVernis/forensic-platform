@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plataforma de análisis forense con inteligencia artificial para expedientes legales">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>ForensicAI — Análisis Forense Inteligente</title>
+  <link rel="stylesheet" href="css/global.css">
+  <style>
+    /* Landing-specific styles */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 80px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      bottom: -300px;
+      left: -200px;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-accent);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #e2e8f0 0%, #38bdf8 50%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-top: 60px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .hero-stat { text-align: center; }
+    .hero-stat .num { font-size: 2rem; font-weight: 800; color: var(--text-accent); }
+    .hero-stat .lbl { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+    /* Features */
+    .features {
+      padding: 100px 24px;
+      background: var(--bg-secondary);
+    }
+
+    .features-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 60px;
+    }
+
+    .features-header h2 { margin-bottom: 12px; }
+    .features-header p { color: var(--text-secondary); }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-glow);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+
+    /* How it works */
+    .how-it-works {
+      padding: 100px 24px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step::after {
+      content: "→";
+      position: absolute;
+      right: -16px;
+      top: 24px;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+    }
+    .step:last-child::after { display: none; }
+
+    .step-num {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+      margin: 0 auto 16px;
+    }
+
+    .step h4 { margin-bottom: 8px; }
+    .step p { font-size: 0.85rem; color: var(--text-secondary); }
+
+    /* Pricing */
+    .pricing {
+      padding: 100px 24px;
+      background: var(--bg-secondary);
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .pricing-card.featured::before {
+      content: "POPULAR";
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: white;
+      padding: 4px 16px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .pricing-card h3 { margin-bottom: 8px; }
+    .pricing-price { font-size: 2.5rem; font-weight: 800; margin: 16px 0; }
+    .pricing-price span { font-size: 1rem; font-weight: 400; color: var(--text-muted); }
+    .pricing-features { list-style: none; text-align: left; margin: 24px 0; }
+    .pricing-features li {
+      padding: 8px 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+    .pricing-features li::before { content: "✓ "; color: var(--success); font-weight: 700; }
+
+    /* Footer */
+    .site-footer {
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.2rem; }
+      .hero-stats { flex-direction: column; gap: 24px; }
+      .features-grid, .steps, .pricing-grid { grid-template-columns: 1fr; }
+      .step::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="logo">FA</div>
+      <span>ForensicAI</span>
+    </a>
+    <div class="navbar-nav">
+      <a href="#features">Características</a>
+      <a href="#how">Cómo funciona</a>
+      <a href="#pricing">Precios</a>
+      <a href="/pages/login.html" class="btn btn-primary btn-sm">Iniciar sesión</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🔬 Plataforma de análisis forense con IA</div>
+      <h1>Analiza expedientes legales con inteligencia artificial</h1>
+      <p>Carga tus carpetas de investigación, detecta inconsistencias, mapea entidades y genera reportes forenses automáticos. Todo protegido con encriptación de grado militar.</p>
+      <div class="hero-actions">
+        <a href="/pages/login.html" class="btn btn-primary btn-lg">Comenzar gratis</a>
+        <a href="#features" class="btn btn-secondary btn-lg">Ver características</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">4</div><div class="lbl">Dimensiones de análisis</div></div>
+        <div class="hero-stat"><div class="num">∞</div><div class="lbl">Expedientes</div></div>
+        <div class="hero-stat"><div class="num">E2E</div><div class="lbl">Encriptación</div></div>
+        <div class="hero-stat"><div class="num">24/7</div><div class="lbl">Disponible</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="features-header">
+      <h2>Todo lo que necesitas para tu análisis forense</h2>
+      <p>Herramientas diseñadas para abogados, investigadores y analistas que necesitan procesar grandes volúmenes de documentación legal.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Grafo relacional</h3>
+        <p>Visualiza personas, vehículos, lugares y sus conexiones en un grafo interactivo. Detecta patrones y relaciones ocultas entre entidades.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Análisis multidimensional</h3>
+        <p>4 dimensiones automáticas: inconsistencias, incongruencias, trazabilidad y declaración vs. evidencia. Cada hallazgo con severidad y fuente.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>Oráculo LLM</h3>
+        <p>Consulta en lenguaje natural sobre el caso. El oráculo conoce el expediente completo y responde con referencias al archivo y chunk de origen.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗄️</div>
+        <h3>Modelo EER</h3>
+        <p>Base de datos relacional generada automáticamente con todas las entidades, relaciones y trazabilidad. Exportable a SQLite, JSON y CSV.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Encriptación E2E</h3>
+        <p>Passwords con PBKDF2-SHA512 (600k iteraciones), sesiones con tokens SHA-256, API keys con AES-256-GCM. Sin datos en texto plano.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Multi-usuario</h3>
+        <p>Cada caso pertenece a un usuario. Comparte casos con permisos granulares (lectura, escritura, admin). Auditoría completa de acciones.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-it-works" id="how">
+    <div class="features-header">
+      <h2>Cómo funciona</h2>
+      <p>De la carga del expediente al reporte forense en 4 pasos simples.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Carga</h4>
+        <p>Sube tus PDFs, documentos de texto e imágenes. El sistema extrae texto automáticamente con OCR.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Seudonimiza</h4>
+        <p>El motor detecta personas y vehículos, genera alias y protege PII durante todo el procesamiento.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Analiza</h4>
+        <p>La IA analiza cada fragmento en 4 dimensiones y construye el grafo relacional de entidades.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Reporta</h4>
+        <p>Genera el reporte forense con nombres restaurados, grafo interactivo y oráculo para consultas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing" id="pricing">
+    <div class="features-header">
+      <h2>Planes simples y transparentes</h2>
+      <p>Sin sorpresas. Paga solo por lo que uses.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Starter</h3>
+        <p class="text-secondary">Para casos individuales</p>
+        <div class="pricing-price">$0<span>/mes</span></div>
+        <ul class="pricing-features">
+          <li>3 casos activos</li>
+          <li>100 páginas por caso</li>
+          <li>Análisis básico</li>
+          <li>Exportación PDF</li>
+        </ul>
+        <a href="/pages/login.html" class="btn btn-secondary btn-block">Comenzar</a>
+      </div>
+      <div class="pricing-card featured">
+        <h3>Professional</h3>
+        <p class="text-secondary">Para despachos pequeños</p>
+        <div class="pricing-price">$49<span>/mes</span></div>
+        <ul class="pricing-features">
+          <li>Casos ilimitados</li>
+          <li>10,000 páginas por caso</li>
+          <li>Oráculo LLM incluido</li>
+          <li>Compartir con 5 usuarios</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <a href="/pages/login.html" class="btn btn-primary btn-block">Elegir plan</a>
+      </div>
+      <div class="pricing-card">
+        <h3>Enterprise</h3>
+        <p class="text-secondary">Para fiscalías y corporativos</p>
+        <div class="pricing-price">Custom</div>
+        <ul class="pricing-features">
+          <li>Todo de Professional</li>
+          <li>Usuarios ilimitados</li>
+          <li>Modelos IA personalizados</li>
+          <li>On-premise disponible</li>
+          <li>SLA garantizado</li>
+        </ul>
+        <a href="mailto:contacto@forensic.ai" class="btn btn-secondary btn-block">Contactar</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>© 2026 ForensicAI. Todos los derechos reservados. Plataforma de análisis forense con inteligencia artificial.</p>
+  </footer>
+
+  <!-- Security: No inline scripts, all JS in external files with SRI -->
+  <script src="js/landing.js" defer></script>
+</body>
+</html>

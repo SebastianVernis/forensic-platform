@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' https://cdn.jsdelivr.net;">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Caso — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js" defer></script>
+  <style>
+    .case-layout { display: flex; min-height: 100vh; }
+    .case-main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+    .case-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+    }
+
+    .case-header-left { display: flex; align-items: center; gap: 16px; }
+    .case-header-left .back { color: var(--text-muted); font-size: 1.2rem; cursor: pointer; }
+    .case-header-left .back:hover { color: var(--text-primary); }
+    .case-header h1 { font-size: 1.2rem; }
+
+    .case-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 0 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .case-tab {
+      padding: 12px 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .case-tab:hover { color: var(--text-primary); }
+    .case-tab.active { color: var(--text-accent); border-bottom-color: var(--accent); }
+
+    .case-content { flex: 1; overflow: auto; }
+
+    .tab-panel { display: none; height: 100%; }
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* Graph panel */
+    .graph-container {
+      flex: 1;
+      position: relative;
+      background: var(--bg-primary);
+      min-height: 500px;
+    }
+
+    .graph-toolbar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .graph-legend {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-size: 0.8rem;
+      z-index: 10;
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* EER panel */
+    .eer-container { padding: 24px; overflow: auto; }
+    .eer-diagram { display: flex; flex-wrap: wrap; gap: 16px; }
+
+    .eer-table {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      min-width: 220px;
+      font-size: 0.8rem;
+    }
+
+    .eer-table.entity { border-color: var(--accent); }
+    .eer-table.relationship { border-color: #a78bfa; }
+
+    .eer-table-header {
+      padding: 8px 12px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .eer-table.entity .eer-table-header { background: rgba(59,130,246,0.15); color: var(--accent); }
+    .eer-table.relationship .eer-table-header { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+    .eer-table table { font-size: 0.75rem; }
+    .eer-table th { background: transparent; color: var(--text-muted); padding: 4px 12px; font-size: 0.7rem; }
+    .eer-table td { padding: 4px 12px; border-bottom: 1px solid var(--border); }
+    .eer-table .pk { color: #fbbf24; font-weight: 700; }
+    .eer-table .fk { color: #a78bfa; }
+
+    /* Oracle panel */
+    .oracle-container { display: flex; flex-direction: column; height: 100%; }
+
+    .oracle-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .oracle-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .oracle-message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: var(--radius-lg);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .oracle-message.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .oracle-message.assistant {
+      align-self: flex-start;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .oracle-message .sources {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+
+    .oracle-input {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+
+    .oracle-input input {
+      flex: 1;
+    }
+
+    /* Upload panel */
+    .upload-container { padding: 24px; }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 60px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
+    .upload-zone.dragover { border-color: var(--accent); background: var(--accent-glow); }
+    .upload-zone .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+    .upload-zone h3 { margin-bottom: 8px; }
+    .upload-zone p { color: var(--text-muted); font-size: 0.9rem; }
+
+    .documents-list { margin-top: 24px; }
+
+    .doc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+    }
+
+    .doc-icon { font-size: 1.5rem; }
+    .doc-info { flex: 1; }
+    .doc-name { font-weight: 600; font-size: 0.9rem; }
+    .doc-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* Config panel */
+    .config-container { padding: 24px; max-width: 700px; }
+
+    .config-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .config-section h3 { margin-bottom: 16px; }
+
+    .config-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .config-row:last-child { border-bottom: none; }
+    .config-label { font-size: 0.9rem; }
+    .config-value { font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono); }
+  </style>
+</head>
+<body>
+
+  <div class="case-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="/pages/dashboard.html" class="navbar-brand" style="margin-bottom:24px;">
+        <div class="logo">FA</div>
+        <span>ForensicAI</span>
+      </a>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Caso</div>
+        <div class="sidebar-item active" data-tab="graph">
+          <span class="icon">🔗</span> Grafo relacional
+        </div>
+        <div class="sidebar-item" data-tab="eer">
+          <span class="icon">🗄️</span> Modelo EER
+        </div>
+        <div class="sidebar-item" data-tab="oracle">
+          <span class="icon">🤖</span> Oráculo
+        </div>
+        <div class="sidebar-item" data-tab="upload">
+          <span class="icon">📄</span> Documentos
+        </div>
+        <div class="sidebar-item" data-tab="config">
+          <span class="icon">⚙️</span> Configuración
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="margin-top:auto;">
+        <div class="sidebar-title">Navegación</div>
+        <a href="/pages/dashboard.html" class="sidebar-item">
+          <span class="icon">📁</span> Mis casos
+        </a>
+        <a href="/pages/account.html" class="sidebar-item">
+          <span class="icon">👤</span> Mi cuenta
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="case-main">
+      <div class="case-header">
+        <div class="case-header-left">
+          <a href="/pages/dashboard.html" class="back">←</a>
+          <h1 id="case-title">Cargando caso...</h1>
+          <span class="badge badge-success" id="case-status">Activo</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary btn-sm" id="btn-analyze">🔍 Analizar</button>
+          <button class="btn btn-secondary btn-sm" id="btn-export">📥 Exportar</button>
+        </div>
+      </div>
+
+      <div class="case-content">
+        <!-- Graph Tab -->
+        <div class="tab-panel active" id="panel-graph">
+          <div class="graph-container" id="graph-canvas">
+            <div class="graph-toolbar">
+              <button class="btn btn-secondary btn-sm" data-action="zoom-in">+</button>
+              <button class="btn btn-secondary btn-sm" data-action="zoom-out">−</button>
+              <button class="btn btn-secondary btn-sm" data-action="fit">Ajustar</button>
+              <select class="form-input" style="max-width:150px; padding:6px 10px; font-size:0.8rem;" id="graph-filter">
+                <option value="all">Todas las entidades</option>
+                <option value="persona">Solo personas</option>
+                <option value="vehiculo">Solo vehículos</option>
+                <option value="lugar">Solo lugares</option>
+                <option value="hallazgo">Solo hallazgos</option>
+              </select>
+            </div>
+            <div class="graph-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div> Persona</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div> Vehículo</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> Lugar</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Hallazgo</div>
+            </div>
+            <div id="graph-empty" class="empty-state" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+              <div class="icon">🔗</div>
+              <h3>Sin datos de grafo</h3>
+              <p class="text-muted">Sube documentos y ejecuta el análisis para generar el grafo relacional.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- EER Tab -->
+        <div class="tab-panel" id="panel-eer">
+          <div class="eer-container">
+            <div id="eer-diagram" class="eer-diagram">
+              <div class="empty-state" style="width:100%;">
+                <div class="icon">🗄️</div>
+                <h3>Sin modelo EER</h3>
+                <p class="text-muted">El modelo se genera automáticamente después del análisis.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Oracle Tab -->
+        <div class="tab-panel" id="panel-oracle">
+          <div class="oracle-container">
+            <div class="oracle-header">
+              <div>
+                <h3 style="margin:0;">Oráculo Forense</h3>
+                <span class="text-sm text-muted">Pregunta sobre el caso en lenguaje natural</span>
+              </div>
+              <select class="form-input" style="max-width:200px; padding:6px 10px; font-size:0.8rem;" id="oracle-model">
+                <option value="default">Modelo por defecto</option>
+              </select>
+            </div>
+            <div class="oracle-messages" id="oracle-messages">
+              <div class="oracle-message assistant">
+                Soy el Oráculo Forense. Puedo responder preguntas sobre este caso basándome en los documentos analizados. ¿Qué necesitas saber?
+              </div>
+            </div>
+            <div class="oracle-input">
+              <input type="text" class="form-input" id="oracle-question" placeholder="Ej: ¿Quién es el defensor de X? ¿Qué vehículos aparecen en el tomo T30?">
+              <button class="btn btn-primary" id="oracle-send">Enviar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div class="tab-panel" id="panel-upload">
+          <div class="upload-container">
+            <div class="upload-zone" id="upload-zone">
+              <div class="icon">📄</div>
+              <h3>Arrastra archivos aquí</h3>
+              <p>o haz clic para seleccionar · PDF, TXT, imágenes · Máximo 50 MB por archivo</p>
+              <input type="file" id="file-input" multiple accept=".pdf,.txt,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp" style="display:none;">
+            </div>
+
+            <div class="section-title">Documentos del caso</div>
+            <div class="documents-list" id="documents-list">
+              <div class="empty-state">
+                <div class="icon">📄</div>
+                <h3>Sin documentos</h3>
+                <p class="text-muted">Sube los archivos del expediente para comenzar el análisis.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config Tab -->
+        <div class="tab-panel" id="panel-config">
+          <div class="config-container">
+            <h2 style="margin-bottom:24px;">Configuración del caso</h2>
+
+            <div class="config-section">
+              <h3>🤖 Modelos de IA</h3>
+              <div class="config-row">
+                <div>
+                  <div class="config-label">Modelo de análisis</div>
+                  <div class="text-xs text-muted">Analiza inconsistencias, incongruencias, trazabilidad</div>
+                </div>
+                <select class="form-input" style="max-width:200px;" id="cfg-analysis-model">
+                  <option value="llama3.1:latest">llama3.1:latest (local)</option>
+                  <option value="mimo-v2.5-pro">mimo-v2.5-pro (cloud)</option>
+                  <option value="minimax-m3:cloud">minimax-m3:cloud</option>
+                  <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                  <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                </select>
+              </div>
+              <div class="config-row">
+                <div>
+                  <div class="config-label">Modelo de mapeo</div>
+                  <div class="text-xs text-muted">Extrae entidades y relaciones del texto</div>
+                </div>
+                <select class="form-input" style="max-width:200px;" id="cfg-mapping-model">
+                  <option value="llama3.1:latest">llama3.1:latest (local)</option>
+                  <option value="mimo-v2.5-pro">mimo-v2.5-pro (cloud)</option>
+                  <option value="minimax-m3:cloud">minimax-m3:cloud</option>
+                </select>
+              </div>
+              <div class="config-row">
+                <div>
+                  <div class="config-label">Modelo del oráculo</div>
+                  <div class="text-xs text-muted">Responde preguntas sobre el caso</div>
+                </div>
+                <select class="form-input" style="max-width:200px;" id="cfg-oracle-model">
+                  <option value="llama3.1:latest">llama3.1:latest (local)</option>
+                  <option value="mimo-v2.5-pro">mimo-v2.5-pro (cloud)</option>
+                  <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                  <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3>🔑 API Keys</h3>
+              <div class="form-group">
+                <label class="form-label">OpenAI API Key</label>
+                <input type="password" class="form-input" placeholder="sk-..." id="cfg-openai-key" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Anthropic API Key</label>
+                <input type="password" class="form-input" placeholder="sk-ant-..." id="cfg-anthropic-key" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ollama Cloud API Key</label>
+                <input type="password" class="form-input" placeholder="..." id="cfg-ollama-key" autocomplete="off">
+              </div>
+              <p class="text-xs text-muted" style="margin-top:8px;">Las API keys se encriptan con AES-256-GCM antes de almacenarse.</p>
+            </div>
+
+            <div class="config-section">
+              <h3>📊 Parámetros del análisis</h3>
+              <div class="form-group">
+                <label class="form-label">Tamaño de chunk (caracteres)</label>
+                <input type="number" class="form-input" value="100000" id="cfg-chunk-size" min="10000" max="500000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Overlap (caracteres)</label>
+                <input type="number" class="form-input" value="5000" id="cfg-overlap" min="0" max="50000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Timeout LLM (segundos)</label>
+                <input type="number" class="form-input" value="300" id="cfg-timeout" min="30" max="1800">
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="save-config">Guardar configuración</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ============================================================
+    // Case Page Logic
+    // ============================================================
+
+    const caseId = new URLSearchParams(window.location.search).get('id');
+    let caseData = null;
+
+    // Auth check
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Not authenticated');
+        return await res.json();
+      } catch (e) {
+        window.location.href = '/pages/login.html';
+        return null;
+      }
+    }
+
+    // Load case
+    async function loadCase() {
+      if (!caseId) {
+        window.location.href = '/pages/dashboard.html';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/cases/${caseId}`, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Case not found');
+        caseData = await res.json();
+        document.getElementById('case-title').textContent = caseData.name;
+        document.getElementById('case-status').textContent = caseData.status === 'active' ? 'Activo' : 'Archivado';
+        document.getElementById('case-status').className = `badge ${caseData.status === 'active' ? 'badge-success' : 'badge-warning'}`;
+        loadDocuments();
+        loadConfig();
+      } catch (e) {
+        console.error('Error loading case:', e);
+        window.location.href = '/pages/dashboard.html';
+      }
+    }
+
+    // Tab switching
+    document.querySelectorAll('.sidebar-item[data-tab]').forEach(item => {
+      item.addEventListener('click', () => {
+        const tab = item.dataset.tab;
+        document.querySelectorAll('.sidebar-item[data-tab]').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(`panel-${tab}`).classList.add('active');
+      });
+    });
+
+    // Upload
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+    async function handleFiles(files) {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await fetch(`/api/cases/${caseId}/documents`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+          });
+          if (res.ok) loadDocuments();
+        } catch (e) {
+          console.error('Upload error:', e);
+        }
+      }
+    }
+
+    async function loadDocuments() {
+      try {
+        const res = await fetch(`/api/cases/${caseId}/documents`, { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const docs = await res.json();
+        const list = document.getElementById('documents-list');
+        if (docs.length === 0) return;
+        list.innerHTML = docs.map(d => `
+          <div class="doc-item">
+            <div class="doc-icon">${d.file_type === 'pdf' ? '📕' : d.file_type === 'txt' ? '📄' : '🖼️'}</div>
+            <div class="doc-info">
+              <div class="doc-name">${escapeHtml(d.filename)}</div>
+              <div class="doc-meta">${formatSize(d.file_size)} · ${d.status}</div>
+            </div>
+            <span class="badge ${d.status === 'done' ? 'badge-success' : d.status === 'processing' ? 'badge-warning' : d.status === 'error' ? 'badge-danger' : 'badge-info'}">${d.status}</span>
+          </div>
+        `).join('');
+      } catch (e) { console.error('Error loading documents:', e); }
+    }
+
+    // Oracle
+    document.getElementById('oracle-send').addEventListener('click', sendOracleQuestion);
+    document.getElementById('oracle-question').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendOracleQuestion();
+    });
+
+    async function sendOracleQuestion() {
+      const input = document.getElementById('oracle-question');
+      const question = input.value.trim();
+      if (!question) return;
+
+      const messages = document.getElementById('oracle-messages');
+      messages.innerHTML += `<div class="oracle-message user">${escapeHtml(question)}</div>`;
+      input.value = '';
+
+      messages.innerHTML += `<div class="oracle-message assistant" id="oracle-loading"><div class="spinner"></div> Pensando...</div>`;
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const res = await fetch(`/api/cases/${caseId}/oracle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json();
+        const loading = document.getElementById('oracle-loading');
+        if (loading) loading.remove();
+        messages.innerHTML += `<div class="oracle-message assistant">${escapeHtml(data.answer || 'No pude generar una respuesta.')}<div class="sources">Fuentes: ${data.sources || 'N/A'}</div></div>`;
+      } catch (e) {
+        const loading = document.getElementById('oracle-loading');
+        if (loading) loading.remove();
+        messages.innerHTML += `<div class="oracle-message assistant" style="color:var(--danger);">Error al consultar el oráculo.</div>`;
+      }
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    // Config
+    async function loadConfig() {
+      if (!caseData?.config_json) return;
+      try {
+        const cfg = JSON.parse(caseData.config_json);
+        if (cfg.analysis_model) document.getElementById('cfg-analysis-model').value = cfg.analysis_model;
+        if (cfg.mapping_model) document.getElementById('cfg-mapping-model').value = cfg.mapping_model;
+        if (cfg.oracle_model) document.getElementById('cfg-oracle-model').value = cfg.oracle_model;
+        if (cfg.chunk_size) document.getElementById('cfg-chunk-size').value = cfg.chunk_size;
+        if (cfg.overlap) document.getElementById('cfg-overlap').value = cfg.overlap;
+        if (cfg.timeout) document.getElementById('cfg-timeout').value = cfg.timeout;
+      } catch (e) {}
+    }
+
+    document.getElementById('save-config').addEventListener('click', async () => {
+      const config = {
+        analysis_model: document.getElementById('cfg-analysis-model').value,
+        mapping_model: document.getElementById('cfg-mapping-model').value,
+        oracle_model: document.getElementById('cfg-oracle-model').value,
+        chunk_size: parseInt(document.getElementById('cfg-chunk-size').value),
+        overlap: parseInt(document.getElementById('cfg-overlap').value),
+        timeout: parseInt(document.getElementById('cfg-timeout').value),
+      };
+      try {
+        await fetch(`/api/cases/${caseId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ config_json: JSON.stringify(config) }),
+        });
+        alert('Configuración guardada');
+      } catch (e) {
+        alert('Error al guardar');
+      }
+    });
+
+    // Analyze button
+    document.getElementById('btn-analyze').addEventListener('click', async () => {
+      if (!confirm('¿Iniciar análisis del caso? Esto puede tomar varios minutos.')) return;
+      try {
+        await fetch(`/api/cases/${caseId}/analyze`, {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+        alert('Análisis iniciado. Recibirás una notificación cuando termine.');
+      } catch (e) {
+        alert('Error al iniciar análisis');
+      }
+    });
+
+    // Helpers
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    function formatSize(bytes) {
+      if (!bytes) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let i = 0;
+      let size = bytes;
+      while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+      return `${size.toFixed(1)} ${units[i]}`;
+    }
+
+    // Graph placeholders
+    function graphZoomIn() {}
+    function graphZoomOut() {}
+    function graphFit() {}
+
+    // Init
+    (async () => {
+      if (await checkAuth()) {
+        loadCase();
+      }
+    })();
+
+    // Event delegation for data-action buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'zoom-in') graphZoomIn();
+      if (action === 'zoom-out') graphZoomOut();
+      if (action === 'fit') graphFit();
+    });
+  </script>
+</body>
+</html>

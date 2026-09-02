@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor de Análisis Forense — Simulador del Pipeline</title>
+<style>
+:root{
+  --bg:#08090c;--panel:#10131a;--panel2:#171c27;--panel3:#1e2433;
+  --border:#252d3d;--text:#d0d7e3;--muted:#7a8599;
+  --accent:#5b9aff;--accent2:#4ade80;--danger:#f87171;--warn:#fbbf24;--info:#38bdf8;
+  --purple:#a78bfa;--orange:#fb923c;--cyan:#22d3ee;
+  --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"Fira Code","JetBrains Mono",ui-monospace,monospace;
+  --radius:10px;--shadow:0 8px 32px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+.top-bar{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:20px;padding:14px 32px;backdrop-filter:blur(12px)}
+.top-bar .logo{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:.04em;white-space:nowrap}
+.top-bar .logo span{color:var(--muted);font-weight:400;font-size:14px;margin-left:8px}
+.top-bar .steps-nav{display:flex;gap:6px;flex:1;overflow-x:auto;padding:0 12px}
+.top-bar .step-pill{padding:8px 16px;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap;border:1px solid transparent;background:transparent;color:var(--muted);transition:.2s}
+.top-bar .step-pill:hover{background:var(--panel2);color:var(--text)}
+.top-bar .step-pill.active{background:var(--panel2);color:var(--accent);border-color:rgba(91,154,255,.3);font-weight:600}
+.top-bar .step-pill.done{color:var(--accent2)}
+
+/* ── MAIN ───────────────────────────────────────────────────────────────── */
+.main{max-width:100%;margin:0 auto;padding:32px 32px 60px}
+.hero{text-align:center;padding:56px 0 40px}
+.hero h1{font-size:42px;font-weight:800;color:var(--text);margin-bottom:12px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--muted);font-size:18px;max-width:800px;margin:0 auto}
+.hero .start-btn{margin-top:28px;display:inline-flex;align-items:center;gap:10px;padding:16px 36px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 0 24px rgba(91,154,255,.3);transition:.2s}
+.hero .start-btn:hover{transform:translateY(-1px);box-shadow:0 0 32px rgba(91,154,255,.45)}
+
+/* ── PIPELINE VISUALIZATION ─────────────────────────────────────────────── */
+.pipeline-flow{display:flex;gap:16px;margin:28px 0;overflow-x:auto;padding:10px 0}
+.pipeline-flow .pf-step{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;position:relative;transition:.3s}
+.pipeline-flow .pf-step.active{border-color:var(--accent);box-shadow:0 0 20px rgba(91,154,255,.2)}
+.pipeline-flow .pf-step.completed{border-color:var(--accent2);opacity:.85}
+.pipeline-flow .pf-step .pf-num{font-size:13px;color:var(--muted);margin-bottom:6px}
+.pipeline-flow .pf-step .pf-icon{font-size:30px;margin-bottom:8px}
+.pipeline-flow .pf-step .pf-label{font-size:14px;font-weight:600;color:var(--text)}
+.pipeline-flow .pf-step.completed .pf-label{color:var(--accent2)}
+.pipeline-flow .pf-arrow{display:flex;align-items:center;color:var(--border);font-size:18px;flex-shrink:0}
+
+/* ── SIMULATION PANEL ───────────────────────────────────────────────────── */
+.sim-panel{display:none;animation:fadeUp .4s ease-out}
+.sim-panel.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.sim-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.sim-header .step-badge{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;background:var(--accent);color:#000;flex-shrink:0}
+.sim-header h2{font-size:24px;font-weight:700}
+.sim-header .sim-desc{color:var(--muted);font-size:15px;margin-left:auto;max-width:520px;text-align:right}
+
+.sim-body{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:860px){.sim-body{grid-template-columns:1fr}}
+
+.sim-col{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.sim-col-header{background:var(--panel2);padding:14px 18px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sim-col-header .dot{width:10px;height:10px;border-radius:50%}
+.sim-col-body{padding:18px;flex:1;overflow:auto;max-height:620px;font-size:15px;line-height:1.7}
+
+/* Terminal / code blocks */
+.terminal{background:#0a0c10;border-radius:8px;padding:18px;font-family:var(--mono);font-size:14px;line-height:1.75;overflow:auto;max-height:560px;white-space:pre-wrap;word-break:break-word}
+.terminal .t-prompt{color:var(--accent2)}
+.terminal .t-cmd{color:var(--text)}
+.terminal .t-out{color:var(--muted)}
+.terminal .t-ok{color:var(--accent2)}
+.terminal .t-err{color:var(--danger)}
+.terminal .t-warn{color:var(--warn)}
+.terminal .t-info{color:var(--info)}
+.terminal .t-hl{color:var(--accent);font-weight:600}
+.terminal .cursor{display:inline-block;width:8px;height:15px;background:var(--accent);animation:blink 1s steps(1) infinite}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+
+/* File list */
+.file-list{display:flex;flex-direction:column;gap:6px}
+.file-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);font-size:15px;transition:.2s}
+.file-item:hover{border-color:var(--accent)}
+.file-item .fi-icon{font-size:20px}
+.file-item .fi-name{flex:1;font-weight:500}
+.file-item .fi-meta{color:var(--muted);font-size:13px}
+
+/* Entity tags */
+.entity-list{display:flex;flex-wrap:wrap;gap:6px}
+.entity-tag{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;font-size:14px;font-weight:600;border:1px solid}
+.entity-tag.persona{background:rgba(91,154,255,.1);border-color:rgba(91,154,255,.25);color:var(--accent)}
+.entity-tag.vehiculo{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.25);color:var(--warn)}
+.entity-tag.lugar{background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.25);color:var(--cyan)}
+.entity-tag.institucion{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.25);color:var(--purple)}
+
+/* Alias table */
+.alias-table{width:100%;border-collapse:collapse;font-size:14px}
+.alias-table th,td{padding:10px 14px;border-bottom:1px solid var(--border);text-align:left}
+.alias-table th{color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0}
+.alias-table td code{font-family:var(--mono);font-size:13px;padding:3px 8px;border-radius:4px;background:var(--panel3)}
+.alias-table .real-name{font-weight:600;color:var(--text)}
+.alias-table .arrow{color:var(--accent);margin:0 6px}
+
+/* Chunk viz */
+.chunk-viz{display:flex;flex-direction:column;gap:10px}
+.chunk-bar{position:relative;height:40px;border-radius:8px;background:var(--panel3);overflow:hidden}
+.chunk-bar .chunk-segment{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#000;transition:.4s}
+.chunk-bar .overlap-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,rgba(91,154,255,.08),rgba(91,154,255,.08) 4px,transparent 4px,transparent 8px)}
+.chunk-legend{display:flex;gap:20px;font-size:13px;color:var(--muted)}
+.chunk-legend span{display:flex;align-items:center;gap:6px}
+.chunk-legend .swatch{width:14px;height:14px;border-radius:3px}
+
+/* LLM call animation */
+.llm-call{display:flex;flex-direction:column;gap:12px}
+.llm-message{display:flex;gap:10px;align-items:flex-start}
+.llm-message .msg-role{font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+.llm-message .msg-role.system{background:rgba(167,139,250,.15);color:var(--purple)}
+.llm-message .msg-role.user{background:rgba(91,154,255,.15);color:var(--accent)}
+.llm-message .msg-role.assistant{background:rgba(74,222,128,.15);color:var(--accent2)}
+.llm-message .msg-body{flex:1;background:var(--panel3);padding:14px 16px;border-radius:8px;font-size:14px;font-family:var(--mono);white-space:pre-wrap;max-height:260px;overflow:auto}
+
+/* Finding cards */
+.finding-cards{display:flex;flex-direction:column;gap:8px}
+.finding-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:.2s}
+.finding-card:hover{border-color:var(--accent)}
+.finding-card .fc-id{font-size:13px;color:var(--muted);margin-bottom:6px}
+.finding-card .fc-desc{font-size:15px;margin-bottom:10px}
+.finding-card .fc-tags{display:flex;gap:8px;flex-wrap:wrap}
+.sev-badge{font-size:12px;padding:4px 10px;border-radius:5px;font-weight:700}
+.sev-badge.alta{background:rgba(248,113,113,.18);color:var(--danger)}
+.sev-badge.media{background:rgba(251,191,36,.18);color:var(--warn)}
+.sev-badge.baja{background:rgba(74,222,128,.18);color:var(--accent2)}
+.cat-badge{font-size:12px;padding:4px 10px;border-radius:5px;font-weight:600;background:rgba(56,189,248,.12);color:var(--info)}
+
+/* Report preview */
+.report-preview{background:#0a0c10;border-radius:10px;padding:28px;font-size:15px;line-height:1.8}
+.report-preview h1{font-size:26px;color:var(--accent);margin-bottom:12px}
+.report-preview h2{font-size:20px;color:var(--text);margin:20px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.report-preview h3{font-size:17px;color:var(--accent2);margin:16px 0 8px}
+.report-preview p{margin:6px 0}
+.report-preview strong{color:var(--text)}
+.report-preview em{color:var(--accent);font-style:normal}
+.report-preview code{font-family:var(--mono);font-size:13px;background:var(--panel3);padding:2px 6px;border-radius:4px}
+
+/* Controls */
+.controls{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{padding:10px 22px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{box-shadow:0 0 12px rgba(91,154,255,.3)}
+.btn-secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent)}
+.btn-success{background:var(--accent2);color:#000}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Progress bar */
+.progress-wrap{margin:12px 0}
+.progress-bar{height:8px;border-radius:4px;background:var(--panel3);overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .6s ease}
+.progress-label{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Status indicator */
+.status-line{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:14px;margin-top:10px}
+.status-line.running{background:rgba(91,154,255,.08);border:1px solid rgba(91,154,255,.2)}
+.status-line.done{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2)}
+.status-line .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ────────────────────────────────────────────────────────────── -->
+<div class="top-bar">
+  <div class="logo">Forense<span>motor v1.0</span></div>
+  <div class="steps-nav" id="stepsNav"></div>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Hero -->
+  <div class="hero" id="heroSection">
+    <h1>Simulador del <em>Pipeline Forense</em></h1>
+    <p>Visualiza paso a paso cómo el motor de análisis procesa expedientes legales: desde la ingesta de documentos hasta el reporte final con hallazgos forenses.</p>
+    <button class="start-btn" onclick="startSimulation()">Iniciar simulación</button>
+  </div>
+
+  <!-- Pipeline flow -->
+  <div class="pipeline-flow" id="pipelineFlow"></div>
+
+  <!-- Simulation panels -->
+  <div id="simPanels"></div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ── PIPELINE STEPS DATA ──────────────────────────────────────────────── */
+const STEPS = [
+  {id:"ingesta", num:0, icon:"📂", label:"Ingesta", desc:"Carga documentos (.txt, .pdf, imágenes) y extrae texto"},
+  {id:"perfilado", num:1, icon:"🔍", label:"Perfilado", desc:"LLM perfila el caso y adapta prompts + blocklist"},
+  {id:"seudonimiza", num:2, icon:"🎭", label:"Seudonimización", desc:"Extrae entidades, construye tabla de alias, reemplaza nombres"},
+  {id:"fragmenta", num:3, icon:"✂️", label:"Fragmentación", desc:"Divide texto en chunks de ~100K chars con overlap"},
+  {id:"analisis", num:4, icon:"🧠", label:"Análisis LLM", desc:"Analizador unificado ejecuta forense multidimensional por chunk"},
+  {id:"reporte", num:5, icon:"📊", label:"Reporte", desc:"Consolida hallazgos, desudonimiza, genera Markdown + JSON"},
+];
+
+let currentStep = -1;
+let simRunning = false;
+
+/* ── SIMPLIFIED DEMO DATA ─────────────────────────────────────────────── */
+const DEMO_FILES = [
+  {name:"AP-MPC-PUE-0007823-2023 T30.txt", ext:".txt", size:"1.2 MB", chars:"482,317"},
+  {name:"Declaracion_testigo_Perez.pdf", ext:".pdf", size:"890 KB", chars:"156,204", pages:42, scanned:12},
+  {name:"Evidencia_fotografica_T30.png", ext:".png", size:"3.4 MB", chars:"12,840", ocr:true},
+  {name:"Oficio_MP_2023-0742.pdf", ext:".pdf", size:"220 KB", chars:"34,521", pages:8, scanned:0},
+];
+
+const DEMO_TEXT = `En la Ciudad de Puebla, Puebla, a los 14 días del mes de marzo de 2024, compareció ante el Agente del Ministerio Público del fuero común, adscrito a la MPC, el C. Antonio Pérez García, quien manifestó llamarse como ha quedado escrito y señaló como domicilio particular el ubicado en calle 5 de Mayo número 189, colonia Centro, de esta ciudad.
+
+Acto seguido, el compareciente fue interrogado sobre los hechos que se investigan en la carpeta AP-MPC-PUE-0007823-2023, mismos que tuvieron lugar el día 15 de enero de 2024, aproximadamente a las 22:30 horas, en las inmediaciones del Boulevard 5 de Mayo, a la altura del kilómetro 2.5 de la carretera Puebla-Cholula.
+
+El declarante manifestó que el día de los hechos se encontraba en compañía de David Zepeda y Fabiola Padilla Cruz, quienes se conducían a bordo de un vehículo marca Ford, tipo Pickup, modelo F-150, color blanco, con placas de circulación XHA-4291 del estado de Puebla, cuando fueron interceptados por una camioneta marca Dodge, tipo Ram, color negro, con placas MSB-7823.`;
+
+const DEMO_PERFIL = {
+  jurisdiccion: "México, Puebla",
+  tipo_caso: "penal",
+  subtipo_caso: "homicidio con arma de fuego",
+  sistema_legal: "civil_law",
+  idioma_principal: "spa",
+  lugares_mencionados: ["Puebla", "Cholula", "Carretera Puebla-Cholula", "Boulevard 5 de Mayo"],
+  instituciones_mencionadas: ["MPC", "Ministerio Público del Estado", "Fiscalía General del Estado"],
+  terminos_legales_relevantes: ["carpeta de investigación", "declaración ministerial", "auto de vinculación a proceso", "cadena de custodia", "dictamen pericial"],
+  tipos_entidad_adicionales: ["ARMAS"],
+  roles_juridicos: ["imputado", "testigo protector", "víctima", "agente MP", "perito criminalista", "defensor público"],
+  temas_recurrentes: ["cadena de custodia de armas", "contradicciones entre declaraciones", "verificación de horarios"],
+  alertas_calibracion: ["Verificar consistencia de fechas de captura", "Validar cadena de custodia de armas de fuego", "Comparar declaraciones de testigos con evidencia pericial"]
+};
+
+const DEMO_ENTITIES = {
+  personas: [
+    {real:"Antonio Pérez García", alias:"PERSONA_001", menciones:42, rol:"imputado"},
+    {real:"David Zepeda", alias:"PERSONA_002", menciones:28, rol:"testigo"},
+    {real:"Fabiola Padilla Cruz", alias:"PERSONA_003", menciones:12, rol:"testigo"},
+    {real:"Miguel Ángel Méndez", alias:"PERSONA_004", menciones:8, rol:"víctima"},
+    {real:"Jesús Mora Bustillos", alias:"PERSONA_005", menciones:6, rol:"agente MP"},
+    {real:"Fernando Allende Sánchez", alias:"PERSONA_006", menciones:4, rol:"perito"},
+  ],
+  vehiculos: [
+    {real:"Ford F-150 Pickup blanca XHA-4291", alias:"VEHICULO_001", menciones:15},
+    {real:"Dodge Ram negra MSB-7823", alias:"VEHICULO_002", menciones:11},
+    {real:"Nissan Sentra gris PQR-5567", alias:"VEHICULO_003", menciones:3},
+  ],
+  blocklist_extra: ["Puebla", "Cholula", "5 de Mayo", "MPC", "Fiscalía", "Estado"]
+};
+
+const DEMO_CHUNKS = [
+  {num:0, start:0, end:97500, size:"97,500", color:"#5b9aff"},
+  {num:1, start:92500, end:192000, size:"99,500", color:"#a78bfa"},
+  {num:2, start:187000, end:289000, size:"102,000", color:"#fb923c"},
+  {num:3, start:284000, end:386000, size:"102,000", color:"#22d3ee"},
+  {num:4, start:381000, end:482317, size:"101,317", color:"#4ade80"},
+];
+
+const DEMO_HALLAZGOS = [
+  {id:"INC-001", cat:"Inconsistencia", tipo:"contradiccion_directa", sev:"alta", desc:"PERSONA_001 declara que llegó a las 22:30 hrs, pero PERSONA_002 afirma que llegó después de las 23:00 hrs"},
+  {id:"INC-002", cat:"Inconsistencia", tipo:"fecha", sev:"media", desc:"La fecha de captura en el oficio difiere de la fecha en la declaración ministerial"},
+  {id:"ING-001", cat:"Incongruencia", tipo:"logica", sev:"alta", desc:"PERSONA_005 reporta haber recolectado evidencia 2 hrs antes de llegar al sitio según su propio parte"},
+  {id:"ING-002", cat:"Incongruencia", tipo:"sin_respaldo", sev:"media", desc:"Se menciona un tercer vehículo sin respaldo documental ni testimoniales independientes"},
+  {id:"DVE-001", cat:"Discrepancia D/E", tipo:"evidencia_ignorada", sev:"alta", desc:"El dictamen pericial de balística contradice la versión de PERSONA_001 sobre la distancia del disparo"},
+  {id:"DVE-002", cat:"Discrepancia D/E", tipo:"cambio_version", sev:"media", desc:"PERSONA_001 cambió su versión entre la declaración inicial y la ampliación de declaración"},
+  {id:"INC-003", cat:"Inconsistencia", tipo:"cadena_custodia", sev:"alta", desc:"Break en cadena de custodia: 4 horas sin registro entre recolección y ingreso al laboratorio"},
+  {id:"ING-003", cat:"Incongruencia", tipo:"secuencia", sev:"baja", desc:"El orden de eventos en el parte policial no coincide con la cronología de llamadas al 911"},
+];
+
+/* ── RENDER PIPELINE FLOW ──────────────────────────────────────────────── */
+function renderPipelineFlow(){
+  const el = document.getElementById('pipelineFlow');
+  el.innerHTML = STEPS.map((s,i)=>{
+    const cls = i < currentStep ? 'completed' : i === currentStep ? 'active' : '';
+    const arrow = i < STEPS.length-1 ? '<div class="pf-arrow">▸</div>' : '';
+    return `<div class="pf-step ${cls}" onclick="goToStep(${i})">
+      <div class="pf-num">Paso ${s.num}/5</div>
+      <div class="pf-icon">${s.icon}</div>
+      <div class="pf-label">${s.label}</div>
+    </div>${arrow}`;
+  }).join('');
+}
+
+function renderStepsNav(){
+  const el = document.getElementById('stepsNav');
+  el.innerHTML = STEPS.map((s,i)=>{
+    const cls = i === currentStep ? 'active' : i < currentStep ? 'done' : '';
+    return `<div class="step-pill ${cls}" onclick="goToStep(${i})">${s.icon} ${s.label}</div>`;
+  }).join('');
+}
+
+/* ── NAVIGATION ─────────────────────────────────────────────────────────── */
+function goToStep(idx){
+  if(idx < 0 || idx >= STEPS.length) return;
+  currentStep = idx;
+  renderPipelineFlow();
+  renderStepsNav();
+  renderSimPanel(idx);
+}
+
+function startSimulation(){
+  document.getElementById('heroSection').style.display='none';
+  goToStep(0);
+  runStepAnimation(0);
+}
+
+/* ── RENDER SIMULATION PANEL ────────────────────────────────────────────── */
+function renderSimPanel(idx){
+  const container = document.getElementById('simPanels');
+  container.innerHTML = '';
+  const panel = document.createElement('div');
+  panel.className = 'sim-panel visible';
+  panel.innerHTML = buildStepContent(idx);
+  container.appendChild(panel);
+  panel.querySelector('.sim-panel')?.classList.add('visible');
+}
+
+function buildStepContent(idx){
+  const s = STEPS[idx];
+  let body = '';
+  switch(idx){
+    case 0: body = buildIngestaContent(); break;
+    case 1: body = buildPerfiladoContent(); break;
+    case 2: body = buildSeudonimizaContent(); break;
+    case 3: body = buildFragmentaContent(); break;
+    case 4: body = buildAnalisisContent(); break;
+    case 5: body = buildReporteContent(); break;
+  }
+  return `
+    <div class="sim-header">
+      <div class="step-badge">${s.num}</div>
+      <h2>${s.icon} ${s.label}</h2>
+      <div class="sim-desc">${s.desc}</div>
+    </div>
+    ${body}
+    <div class="controls">
+      ${idx > 0 ? `<button class="btn btn-secondary" onclick="goToStep(${idx-1})">← Anterior</button>` : ''}
+      ${idx < STEPS.length-1 ? `<button class="btn btn-primary" onclick="goToStep(${idx+1});runStepAnimation(${idx+1})">Siguiente paso →</button>` : `<button class="btn btn-success" onclick="goToStep(0);document.getElementById('heroSection').style.display=''">Reiniciar simulación</button>`}
+    </div>`;
+}
+
+/* ── STEP 0: INGESTA ──────────────────────────────────────────────────── */
+function buildIngestaContent(){
+  const files = DEMO_FILES.map(f=>{
+    let icon = f.ext==='.txt' ? '📄' : f.ext==='.pdf' ? '📕' : '🖼️';
+    let meta = f.chars + ' chars';
+    if(f.pages) meta += ` · ${f.pages} pág${f.scanned ? ` (${f.scanned} escaneadas → OCR)` : ''}`;
+    if(f.ocr) meta += ' · OCR directo';
+    return `<div class="file-item"><span class="fi-icon">${icon}</span><span class="fi-name">${f.name}</span><span class="fi-meta">${f.size} · ${meta}</span></div>`;
+  }).join('');
+
+  const textPreview = DEMO_TEXT.substring(0, 600);
+
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--info)"></div>Archivos detectados en INPUT_DIR</div>
+      <div class="sim-col-body">
+        <div class="file-list">${files}</div>
+        <div style="margin-top:16px;font-size:14px;color:var(--muted)">
+          Extensiones soportadas: <code>.txt</code> <code>.pdf</code> <code>.png</code> <code>.jpg</code> <code>.tiff</code> <code>.bmp</code> <code>.webp</code>
+        </div>
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent2)"></div>Texto extraído (preview)</div>
+      <div class="sim-col-body">
+        <div class="terminal" id="ingestaTerminal"></div>
+      </div>
+    </div>
+  </div>
+  <div id="ingestaStatus"></div>`;
+}
+
+/* ── STEP 1: PERFILADO ────────────────────────────────────────────────── */
+function buildPerfiladoContent(){
+  const perfil = DEMO_PERFIL;
+  const lugares = perfil.lugares_mencionados.map(l=>`<span class="entity-tag lugar">${l}</span>`).join('');
+  const instituciones = perfil.instituciones_mencionadas.map(i=>`<span class="entity-tag institucion">${i}</span>`).join('');
+  const terminos = perfil.terminos_legales_relevantes.map(t=>`<span class="entity-tag" style="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.25);color:var(--warn)">${t}</span>`).join('');
+  const roles = perfil.roles_juridicos.map(r=>`<span class="entity-tag" style="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.25);color:var(--danger)">${r}</span>`).join('');
+  const alertas = perfil.alertas_calibracion.map(a=>`<li style="font-size:14px;color:var(--warn);margin-bottom:6px">${a}</li>`).join('');
+
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--purple)"></div>LLM Call — Perfilado del caso</div>
+      <div class="sim-col-body">
+        <div class="llm-call">
+          <div class="llm-message">
+            <span class="msg-role system">SYSTEM</span>
+            <div class="msg-body">Eres un analista forense que debe caracterizar un expediente legal a partir de un fragmento de texto.<br><br>Tu trabajo: generar un PERFIL DEL CASO que ayude a calibrar un sistema de análisis automático.</div>
+          </div>
+          <div class="llm-message">
+            <span class="msg-role user">USER</span>
+            <div class="msg-body">Analiza el siguiente fragmento representativo del expediente:<br><br>"""<br>[~30,000 chars de muestra del corpus]<br>"""</div>
+          </div>
+          <div class="llm-message">
+            <span class="msg-role assistant">ASSISTANT</span>
+            <div class="msg-body" id="perfilResult"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent2)"></div>Perfil generado (case_profile.json)</div>
+      <div class="sim-col-body" id="perfilBody">
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">JURISDICCIÓN</span><br><strong style="font-size:18px">${perfil.jurisdiccion}</strong></div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">TIPO DE CASO</span><br><strong>${perfil.tipo_caso}</strong> / ${perfil.subtipo_caso}</div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">SISTEMA LEGAL</span><br>${perfil.sistema_legal}</div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">LUGARES → blocklist del pseudonymizer</span><br><div class="entity-list" style="margin-top:6px">${lugares}</div></div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">INSTITUCIONES → blocklist</span><br><div class="entity-list" style="margin-top:6px">${instituciones}</div></div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">TÉRMINOS LEGALES → inyectados en prompts</span><br><div class="entity-list" style="margin-top:6px">${terminos}</div></div>
+        <div style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">ROLES JURÍDICOS → trazabilidad</span><br><div class="entity-list" style="margin-top:6px">${roles}</div></div>
+        <div><span style="font-size:13px;color:var(--muted)">ALERTAS DE CALIBRACIÓN</span><br><ul style="padding-left:20px;margin-top:6px">${alertas}</ul></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── STEP 2: SEUDONIMIZACIÓN ──────────────────────────────────────────── */
+function buildSeudonimizaContent(){
+  const ent = DEMO_ENTITIES;
+  const personaRows = ent.personas.map(p=>`<tr>
+    <td class="real-name">${p.real}</td>
+    <td><span class="arrow">→</span></td>
+    <td><code>${p.alias}</code></td>
+    <td>${p.menciones}</td>
+    <td><span class="entity-tag persona" style="font-size:13px">${p.rol}</span></td>
+  </tr>`).join('');
+  const vehiculoRows = ent.vehiculos.map(v=>`<tr>
+    <td class="real-name">${v.real}</td>
+    <td><span class="arrow">→</span></td>
+    <td><code>${v.alias}</code></td>
+    <td>${v.menciones}</td>
+    <td></td>
+  </tr>`).join('');
+  const blocklist = ent.blocklist_extra.map(b=>`<span class="entity-tag" style="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.25);color:var(--warn);font-size:13px">${b}</span>`).join(' ');
+
+  const seudoText = `En la Ciudad de LUGAR_001, a los 14 días del mes de marzo de 2024, compareció ante el AGENTE_MP del Ministerio Público del Estado, adscrito a la INSTITUCION_001, el C. PERSONA_001, quien manifestó llamarse como ha quedado escrito...
+
+...el compareciente fue interrogado sobre los hechos que se investigan en la carpeta INSTITUCION_002, mismos que tuvieron lugar el día 15 de enero de 2024, aproximadamente a las 22:30 horas, en las inmediaciones del LUGAR_002...
+
+...se conducían a bordo de un VEHICULO_001, cuando fueron interceptados por VEHICULO_002...`;
+
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent)"></div>Tabla de alias (alias_map.json)</div>
+      <div class="sim-col-body">
+        <div style="font-size:14px;color:var(--muted);margin-bottom:12px">Personas detectadas</div>
+        <table class="alias-table">
+          <thead><tr><th>Nombre real</th><th></th><th>Alias</th><th>Menc.</th><th>Rol</th></tr></thead>
+          <tbody>${personaRows}</tbody>
+        </table>
+        <div style="font-size:14px;color:var(--muted);margin:16px 0 12px">Vehículos detectados</div>
+        <table class="alias-table">
+          <thead><tr><th>Descripción real</th><th></th><th>Alias</th><th>Menc.</th><th></th></tr></thead>
+          <tbody>${vehiculoRows}</tbody>
+        </table>
+        <div style="font-size:14px;color:var(--muted);margin:16px 0 8px">Blocklist aumentada por el perfil</div>
+        <div class="entity-list">${blocklist}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:10px">Estos términos NO se seudonimizan (son lugares/instituciones, no personas)</div>
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent2)"></div>Texto seudonimizado (preview)</div>
+      <div class="sim-col-body">
+        <div class="terminal" id="seudoTerminal">${seudoText}</div>
+        <div style="margin-top:16px;font-size:14px;color:var(--muted)">
+          <strong>Principio clave:</strong> Todo el análisis LLM se ejecuta sobre texto seudonimizado.
+          Los nombres reales solo se restauran en el reporte final.
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── STEP 3: FRAGMENTACIÓN ────────────────────────────────────────────── */
+function buildFragmentaContent(){
+  const chunks = DEMO_CHUNKS;
+  const totalChars = 482317;
+  const chunkSize = 100000;
+  const overlap = 5000;
+
+  const bars = chunks.map(c=>{
+    const leftPct = (c.start/totalChars*100).toFixed(2);
+    const widthPct = ((c.end-c.start)/totalChars*100).toFixed(2);
+    return `<div style="margin-bottom:6px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Chunk ${c.num}: ${c.start.toLocaleString()} → ${c.end.toLocaleString()} (${c.size} chars)</div>
+      <div class="chunk-bar">
+        <div class="chunk-segment" style="left:${leftPct}%;width:${widthPct}%;background:${c.color}">${c.num}</div>
+        ${c.num > 0 ? `<div class="overlap-zone" style="left:${(c.start/totalChars*100).toFixed(2)}%;width:${(overlap/totalChars*100*3).toFixed(2)}%"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const fullBar = `<div style="margin-top:20px">
+    <div style="font-size:14px;color:var(--muted);margin-bottom:8px">Documento completo: ${totalChars.toLocaleString()} chars → ${chunks.length} chunks</div>
+    <div class="chunk-bar" style="height:40px">
+      ${chunks.map(c=>{
+        const leftPct = (c.start/totalChars*100).toFixed(2);
+        const widthPct = ((c.end-c.start)/totalChars*100).toFixed(2);
+        return `<div class="chunk-segment" style="left:${leftPct}%;width:${widthPct}%;background:${c.color};font-size:14px">C${c.num}</div>`;
+      }).join('')}
+    </div>
+    <div class="chunk-legend" style="margin-top:8px">
+      <span><div class="swatch" style="background:var(--accent)"></div>Chunk</span>
+      <span><div class="swatch" style="background:repeating-linear-gradient(45deg,rgba(91,154,255,.3),rgba(91,154,255,.3) 3px,transparent 3px,transparent 6px)"></div>Overlap (5K chars)</span>
+    </div>
+  </div>`;
+
+  const code = `<span class="t-prompt">>>> </span><span class="t-cmd">chunk_texto(texto, chunk_size=100_000, overlap=5_000)</span>
+<span class="t-out">  → 5 chunks generados</span>
+<span class="t-out">  → Snapping a límites de párrafo (\\n\\n)</span>
+<span class="t-out">  → Overlap de 5K chars evita cortar declaraciones</span>
+<span class="t-out">  → 100K chars ≈ 25K tokens en español</span>
+<span class="t-out">  → Cabe en modelos con ventana de 200K tokens</span>`;
+
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--orange)"></div>Visualización de chunks</div>
+      <div class="sim-col-body">
+        ${bars}
+        ${fullBar}
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent2)"></div>Lógica de fragmentación</div>
+      <div class="sim-col-body">
+        <div class="terminal">${code}</div>
+        <div style="margin-top:14px">
+          <div style="font-size:14px;color:var(--muted);margin-bottom:10px">Parámetros configurables (config.py):</div>
+          <table class="alias-table">
+            <thead><tr><th>Parámetro</th><th>Valor</th><th>Propósito</th></tr></thead>
+            <tbody>
+              <tr><td><code>CHUNK_SIZE</code></td><td>100,000</td><td>~25K tokens, cabe en 200K context window</td></tr>
+              <tr><td><code>CHUNK_OVERLAP</code></td><td>5,000</td><td>Evita cortar declaraciones en los bordes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px;font-size:14px;color:var(--muted)">
+          <strong>Snapping:</strong> Si un corte cae dentro de los últimos 5K chars del chunk, retrocede hasta el último <code>\\n\\n</code> (límite de párrafo) para no partir oraciones.
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── STEP 4: ANÁLISIS LLM ─────────────────────────────────────────────── */
+function buildAnalisisContent(){
+  const findings = DEMO_HALLAZGOS.map(f=>`<div class="finding-card">
+    <div class="fc-id">${f.id}</div>
+    <div class="fc-desc">${f.desc}</div>
+    <div class="fc-tags">
+      <span class="sev-badge ${f.sev}">${f.sev.toUpperCase()}</span>
+      <span class="cat-badge">${f.cat}</span>
+      <span class="entity-tag" style="font-size:13px;background:var(--panel3);border-color:var(--border);color:var(--muted)">${f.tipo.replace(/_/g,' ')}</span>
+    </div>
+  </div>`).join('');
+
+  const promptPreview = `Eres un analista forense experto en jurisdicción México, Puebla.
+Tipo de caso: penal / homicidio con arma de fuego.
+
+Términos legales frecuentes: carpeta de investigación, declaración ministerial, auto de vinculación a proceso, cadena de custodia, dictamen pericial
+
+ATENCIÓN ESPECIAL: Verificar consistencia de fechas de captura; Validar cadena de custodia de armas de fuego; Comparar declaraciones de testigos con evidencia pericial
+
+Analiza el siguiente fragmento seudonimizado y detecta:
+1. Inconsistencias entre declaraciones
+2. Incongruencias internas
+3. Trazabilidad de entidades
+4. Discrepancias declaración vs. evidencia
+
+Responde EXCLUSIVAMENTE con JSON válido.`;
+
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--purple)"></div>Prompt adaptado → LLM por chunk</div>
+      <div class="sim-col-body">
+        <div class="llm-call">
+          <div class="llm-message">
+            <span class="msg-role system">SYSTEM</span>
+            <div class="msg-body">${promptPreview}</div>
+          </div>
+          <div class="llm-message">
+            <span class="msg-role user">USER</span>
+            <div class="msg-body">[Chunk 0 — 97,500 chars de texto seudonimizado]</div>
+          </div>
+          <div class="llm-message">
+            <span class="msg-role assistant">ASSISTANT</span>
+            <div class="msg-body" id="analysisResult">{ ... JSON con hallazgos ... }</div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="fill" id="analysisProgress" style="width:0%"></div></div>
+            <div class="progress-label" id="analysisLabel">Esperando…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--danger)"></div>Hallazgos detectados (simulación)</div>
+      <div class="sim-col-body">
+        <div class="finding-cards" id="findingCards">${findings}</div>
+        <div style="margin-top:16px;font-size:13px;color:var(--muted)">
+          Los hallazgos se acumulan por chunk y se consolidan en el paso final.
+          Cada hallazgo incluye: categoría, tipo, severidad, descripción, personas involucradas, ubicación en el texto.
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── STEP 5: REPORTE ──────────────────────────────────────────────────── */
+function buildReporteContent(){
+  return `<div class="sim-body">
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent2)"></div>Flujo de consolidación</div>
+      <div class="sim-col-body">
+        <div class="terminal" id="reporteTerminal"></div>
+      </div>
+    </div>
+    <div class="sim-col">
+      <div class="sim-col-header"><div class="dot" style="background:var(--accent)"></div>Reporte final (reporte_forense.md)</div>
+      <div class="sim-col-body">
+        <div class="report-preview" id="reportePreview"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── ANIMATIONS ─────────────────────────────────────────────────────────── */
+function runStepAnimation(idx){
+  switch(idx){
+    case 0: animateIngesta(); break;
+    case 1: animatePerfilado(); break;
+    case 4: animateAnalisis(); break;
+    case 5: animateReporte(); break;
+  }
+}
+
+function animateIngesta(){
+  const el = document.getElementById('ingestaTerminal');
+  if(!el) return;
+  const lines = [
+    {t:'p', text:'>>> cargar_documentos(INPUT_DIR)'},
+    {t:'out', text:'  Escaneando directorio...'},
+    {t:'ok', text:'  ✓ AP-MPC-PUE-0007823-2023 T30.txt — 482,317 chars (texto nativo)'},
+    {t:'out', text:'  Cargando Declaracion_testigo_Perez.pdf...'},
+    {t:'out', text:'  → Páginas 1-30: texto nativo extraído'},
+    {t:'info', text:'  → Páginas 31-42: <30 chars nativos → renderizando a 300 DPI → OCR Tesseract (spa)'},
+    {t:'ok', text:'  ✓ Declaracion_testigo_Perez.pdf — 156,204 chars (42 pág, 12 con OCR)'},
+    {t:'out', text:'  Cargando Evidencia_fotografica_T30.png...'},
+    {t:'info', text:'  → OCR directo vía Tesseract (lang=spa)'},
+    {t:'ok', text:'  ✓ Evidencia_fotografica_T30.png — 12,840 chars (OCR)'},
+    {t:'ok', text:'  ✓ Oficio_MP_2023-0742.pdf — 34,521 chars (8 pág, todas nativas)'},
+    {t:'p', text:''},
+    {t:'hl', text:'  4 documentos cargados, 685,882 chars totales'},
+  ];
+  typeLines(el, lines, 0);
+}
+
+function animatePerfilado(){
+  const el = document.getElementById('perfilResult');
+  if(!el) return;
+  const json = JSON.stringify(DEMO_PERFIL, null, 2);
+  let idx = 0;
+  const interval = setInterval(()=>{
+    if(idx >= json.length){ clearInterval(interval); return; }
+    const chunk = json.substring(0, idx+3);
+    el.textContent = chunk;
+    idx += 3;
+  }, 8);
+}
+
+function animateAnalisis(){
+  const progressEl = document.getElementById('analysisProgress');
+  const labelEl = document.getElementById('analysisLabel');
+  const resultEl = document.getElementById('analysisResult');
+  if(!progressEl) return;
+  const chunks = DEMO_CHUNKS;
+  let i = 0;
+  const resultJSON = `{
+  "inconsistencias": [
+    {"id": "INC-001", "tipo": "contradiccion_directa", "severidad": "alta", "descripcion": "PERSONA_001 declara que llegó a las 22:30 hrs..."}
+  ],
+  "incongruencias": [
+    {"id": "ING-001", "tipo": "logica", "severidad": "alta", "descripcion": "PERSONA_005 reporta haber recolectado evidencia..."}
+  ],
+  "trazabilidad": {
+    "PERSONA_001": {"rol_probable": "imputado", "acciones_principales": ["..."]},
+    "VEHICULO_001": {"rol_probable": "vehículo del imputado", "acciones_principales": ["..."]}
+  },
+  "declaracion_vs_evidencia": [
+    {"id": "DVE-001", "tipo": "evidencia_ignorada", "severidad": "alta", "descripcion": "El dictamen pericial de balística contradice..."}
+  ]
+}`;
+  const interval = setInterval(()=>{
+    if(i >= chunks.length){
+      clearInterval(interval);
+      if(labelEl) labelEl.textContent = '✓ Análisis completado — 5/5 chunks procesados';
+      if(resultEl) resultEl.textContent = resultJSON;
+      return;
+    }
+    const pct = ((i+1)/chunks.length*100).toFixed(0);
+    if(progressEl) progressEl.style.width = pct+'%';
+    if(labelEl) labelEl.textContent = `Chunk ${i+1}/${chunks.length} — ~${(i+1)*80}s de API`;
+    i++;
+  }, 600);
+}
+
+function animateReporte(){
+  const terminalEl = document.getElementById('reporteTerminal');
+  const previewEl = document.getElementById('reportePreview');
+  if(!terminalEl) return;
+  const lines = [
+    {t:'p', text:'>>> consolidar_hallazgos(resultados_unificados.json)'},
+    {t:'out', text:'  Fusionando resultados de 5 chunks...'},
+    {t:'out', text:'  → 8 inconsistencias deduplicadas'},
+    {t:'out', text:'  → 5 incongruencias acumuladas'},
+    {t:'out', text:'  → 6 entidades de trazabilidad consolidadas'},
+    {t:'out', text:'  → 3 discrepancias declaración vs. evidencia'},
+    {t:'p', text:''},
+    {t:'p', text:'>>> desudonimizar(reporte, alias_map)'},
+    {t:'hl', text:'  Restaurando nombres reales...'},
+    {t:'ok', text:'  PERSONA_001 → Antonio Pérez García'},
+    {t:'ok', text:'  PERSONA_002 → David Zepeda'},
+    {t:'ok', text:'  PERSONA_003 → Fabiola Padilla Cruz'},
+    {t:'ok', text:'  VEHICULO_001 → Ford F-150 Pickup blanca XHA-4291'},
+    {t:'ok', text:'  VEHICULO_002 → Dodge Ram negra MSB-7823'},
+    {t:'p', text:''},
+    {t:'hl', text:'  ✓ reporte_forense.md generado (nombres reales restaurados)'},
+    {t:'hl', text:'  ✓ reporte_forense.json generado (conserva aliases, requiere desudonimización manual)'},
+  ];
+  typeLines(terminalEl, lines, 0, ()=>{
+    if(previewEl){
+      previewEl.innerHTML = `<h1>Reporte de Análisis Forense</h1>
+<p><strong>Generado:</strong> 2026-07-09 14:32:00<br>
+<strong>Total personas únicas:</strong> 6<br>
+<strong>Total vehículos únicos:</strong> 3</p>
+<hr style="border-color:var(--border);margin:12px 0">
+<h2>1. Inconsistencias entre declaraciones (8)</h2>
+<h3>Severidad ALTA (3)</h3>
+<p><strong>INC-001 — Contradiccion Directa</strong><br>
+<em>PERSONA_001</em> declara que llegó a las 22:30 hrs, pero <em>PERSONA_002</em> afirma que llegó después de las 23:00 hrs<br>
+<strong>Personas involucradas:</strong> Antonio Pérez García, David Zepeda<br>
+<strong>Evidencia:</strong> <em>Declaración ministerial foja 12 vs. amplificación de declaración foja 45</em></p>
+<p><strong>INC-003 — Cadena Custodia</strong><br>
+Break en cadena de custodia: 4 horas sin registro entre recolección e ingreso al laboratorio<br>
+<strong>Personas involucradas:</strong> Jesús Mora Bustillos<br>
+<strong>Evidencia:</strong> <em>Parte de recolección foja 78 vs. Hoja de ingreso laboratorio foja 112</em></p>
+<h3>Severidad MEDIA (4)</h3>
+<p>...</p>
+<hr style="border-color:var(--border);margin:12px 0">
+<h2>2. Incongruencias internas (5)</h2>
+<h3>Severidad ALTA (1)</h3>
+<p><strong>ING-001 — Lógica</strong><br>
+<em>PERSONA_005</em> reporta haber recolectado evidencia 2 hrs antes de llegar al sitio según su propio parte<br>
+<strong>Validación requerida:</strong> Verificar hora de llegada vs. hora de recolección</p>
+<h3>Severidad MEDIA (3)</h3>
+<p>...</p>
+<hr style="border-color:var(--border);margin:12px 0">
+<h2>3. Trazabilidad de entidades (6)</h2>
+<h3>Rol: Imputado (1)</h3>
+<p><strong>Antonio Pérez García</strong> (<code>PERSONA_001</code>)<br>
+- <strong>Menciones en chunks:</strong> 3<br>
+- <strong>Acciones principales:</strong> Declaró ante MP, Cambió versión entre declaraciones, Señaló ubicación de armas<br>
+- <strong>Relacionado con:</strong> David Zepeda, Fabiola Padilla Cruz, VEHICULO_001</p>
+<h3>Rol: Testigo (2)</h3>
+<p>...</p>
+<hr style="border-color:var(--border);margin:12px 0">
+<h2>4. Discrepancias declaración vs. evidencia (3)</h2>
+<p><strong>DVE-001 — Evidencia Ignorada</strong> <span class="sev-badge alta">ALTA</span><br>
+El dictamen pericial de balística contradice la versión de <em>Antonio Pérez García</em> sobre la distancia del disparo<br>
+<strong>Declaración:</strong> "Disparó desde aproximadamente 3 metros"<br>
+<strong>Evidencia:</strong> Dictamen de balística indica distancia de 0.5-1 metro</p>
+<hr style="border-color:var(--border);margin:12px 0">
+<h3>Apéndice: Tabla de alias</h3>
+<p style="font-size:14px;color:var(--muted)">
+PERSONA_001 = Antonio Pérez García · PERSONA_002 = David Zepeda · PERSONA_003 = Fabiola Padilla Cruz<br>
+VEHICULO_001 = Ford F-150 Pickup blanca XHA-4291 · VEHICULO_002 = Dodge Ram negra MSB-7823
+</p>`;
+    }
+  });
+}
+
+function typeLines(el, lines, startIdx, onDone){
+  let i = startIdx;
+  let currentText = '';
+  function addNext(){
+    if(i >= lines.length){
+      if(onDone) onDone();
+      return;
+    }
+    const line = lines[i];
+    const prefix = line.t==='p' ? '<span class="t-prompt">' :
+                   line.t==='ok' ? '<span class="t-ok">' :
+                   line.t==='err' ? '<span class="t-err">' :
+                   line.t==='warn' ? '<span class="t-warn">' :
+                   line.t==='info' ? '<span class="t-info">' :
+                   line.t==='hl' ? '<span class="t-hl">' : '<span class="t-out">';
+    currentText += prefix + escHTML(line.text) + '</span>\n';
+    el.innerHTML = currentText;
+    el.scrollTop = el.scrollHeight;
+    i++;
+    setTimeout(addNext, line.t==='p' ? 400 : 120);
+  }
+  addNext();
+}
+
+function escHTML(s){
+  const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+}
+
+/* ── INIT ────────────────────────────────────────────────────────────────── */
+renderPipelineFlow();
+renderStepsNav();
+</script>
+</body>
+</html>
