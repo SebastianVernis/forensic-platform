@@ -9,7 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "forensic-platform-db"
-database_id = "339d99da-fab4-4c74-a2b2-4cee23c4680f"
+database_id = "ea846046-9719-4ded-afed-da188e7ae4a2"
 
 # R2 Storage for documents
 [[r2_buckets]]
@@ -19,7 +19,7 @@ bucket_name = "forensic-platform-documents"
 # KV for sessions and rate limiting
 [[kv_namespaces]]
 binding = "KV"
-id = "0b84d7b28cec4d66939634b383e71ea7"
+id = "8c3179c5ff664f119f61d925c67386db"
 
 # Environment variables
 [vars]

@@ -8,30 +8,31 @@
 
 :root {
   /* Colors — dark navy palette */
-  --bg-primary: #0a0e1a;
+  --bg-primary: #0B1026;
   --bg-secondary: #111827;
   --bg-card: #1a2236;
   --bg-card-hover: #1f2a42;
   --bg-input: #0f1629;
   --border: #2a3550;
-  --border-focus: #3b82f6;
+  --border-focus: #38C6D8;
 
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --text-accent: #38bdf8;
+  --text-accent: #38C6D8;
 
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-glow: rgba(59, 130, 246, 0.25);
+  --accent: #38C6D8;
+  --accent-hover: #1FA5B6;
+  --accent-glow: rgba(56, 198, 216, 0.25);
 
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #06b6d4;
+  --info: #38C6D8;
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-brand: 'Michroma', 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
   /* Spacing */
@@ -280,14 +281,25 @@ tr:hover td { background: var(--bg-card-hover); }
 .navbar-brand .logo {
   width: 32px;
   height: 32px;
-  background: var(--accent);
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 0.9rem;
-  color: white;
+}
+
+.navbar-brand .logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.navbar-brand .brand-text {
+  font-family: var(--font-brand);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.navbar-brand .brand-text .ia {
+  color: var(--accent);
 }
 
 .navbar-nav { display: flex; gap: 4px; }
