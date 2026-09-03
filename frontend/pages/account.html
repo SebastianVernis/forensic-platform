@@ -414,7 +414,7 @@
     }
 
     // Init
-    checkAuth();
+    (async () => { if (await checkAuth()) await checkSubscription(); })();
 
     // Event delegation for data-action buttons
     document.addEventListener('click', (e) => {
@@ -424,6 +424,22 @@
       const id = btn.dataset.id;
       if (action === 'revoke') revokeSession(id);
     });
+
+    // Subscription gate
+    async function checkSubscription() {
+      try {
+        const subRes = await fetch('/api/subscribe/status', { credentials: 'same-origin' });
+        const sub = await subRes.json();
+        if (!sub.has_subscription) {
+          window.location.href = '/pages/subscribe.html';
+          return false;
+        }
+        return true;
+      } catch(e) {
+        window.location.href = '/pages/subscribe.html';
+        return false;
+      }
+    }
   </script>
 </body>
 </html>

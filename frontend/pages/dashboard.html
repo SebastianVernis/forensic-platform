@@ -608,6 +608,7 @@
     // Init
     (async () => {
       if (await checkAuth()) {
+        if (!(await checkSubscription())) return;
         loadCases();
       }
     })();
@@ -621,6 +622,22 @@
       if (action === 'share') openShareModal(id);
       if (action === 'delete') deleteCase(id);
     });
+
+    // Subscription gate
+    async function checkSubscription() {
+      try {
+        const subRes = await fetch('/api/subscribe/status', { credentials: 'same-origin' });
+        const sub = await subRes.json();
+        if (!sub.has_subscription) {
+          window.location.href = '/pages/subscribe.html';
+          return false;
+        }
+        return true;
+      } catch(e) {
+        window.location.href = '/pages/subscribe.html';
+        return false;
+      }
+    }
   </script>
 </body>
 </html>

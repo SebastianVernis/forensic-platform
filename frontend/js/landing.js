@@ -1,4 +1,4 @@
-// Forensic Platform — Landing Page JS
+// Themis IA — Landing Page JS
 // Minimal, no inline scripts, CSP-safe
 
 document.addEventListener('DOMContentLoaded', () => {

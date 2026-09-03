@@ -466,8 +466,14 @@
 
         if (response.ok) {
           showAlert('success', 'Inicio de sesión exitoso. Redirigiendo...');
-          setTimeout(() => {
-            window.location.href = '/pages/dashboard.html';
+          setTimeout(async () => {
+            const next = new URLSearchParams(window.location.search).get('next');
+            if (next) { window.location.href = next; return; }
+            try {
+              const subRes = await fetch('/api/subscribe/status', { credentials: 'same-origin' });
+              const sub = await subRes.json();
+              window.location.href = sub.has_subscription ? '/pages/dashboard.html' : '/pages/subscribe.html';
+            } catch(e) { window.location.href = '/pages/subscribe.html'; }
           }, 800);
         } else {
           showAlert('error', data.error || 'Credenciales inválidas');
@@ -534,7 +540,8 @@
         if (response.ok) {
           showAlert('success', 'Cuenta creada exitosamente. Redirigiendo...');
           setTimeout(() => {
-            window.location.href = '/pages/dashboard.html';
+            const next = new URLSearchParams(window.location.search).get('next');
+            window.location.href = next || '/pages/subscribe.html';
           }, 800);
         } else {
           showAlert('error', data.error || 'Error al crear la cuenta');
@@ -552,7 +559,11 @@
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
         if (res.ok) {
-          window.location.href = '/pages/dashboard.html';
+          const next = new URLSearchParams(window.location.search).get('next');
+          if (next) { window.location.href = next; return; }
+          const subRes = await fetch('/api/subscribe/status', { credentials: 'same-origin' });
+          const sub = await subRes.json();
+          window.location.href = sub.has_subscription ? '/pages/dashboard.html' : '/pages/subscribe.html';
         }
       } catch (e) { /* not logged in */ }
     })();

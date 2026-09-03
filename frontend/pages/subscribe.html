@@ -7,7 +7,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta name="robots" content="noindex, nofollow">
-  <title>Suscripción — ForensicAI</title>
+  <title>Suscripción — Themis IA</title>
   <link rel="stylesheet" href="../css/global.css">
   <style>
     .subscribe-page {
@@ -46,6 +46,16 @@
       color: white;
     }
 
+    .subscribe-header .brand-text {
+      font-family: var(--font-brand);
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .subscribe-header .brand-text .ia {
+      color: var(--accent);
+    }
+
     .subscribe-content {
       flex: 1;
       display: flex;
@@ -82,6 +92,8 @@
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     .plan-card:hover { border-color: var(--accent); }
@@ -228,8 +240,8 @@
   <div class="subscribe-page">
     <header class="subscribe-header">
       <div class="logo">
-        <div class="logo-icon">FA</div>
-        <span>ForensicAI</span>
+        <img src="../assets/themis-ia_isotipo_mono-blanco.svg" alt="Themis IA" style="width:32px;height:32px;object-fit:contain;">
+        <span class="brand-text">THEMIS <span class="ia">IA</span></span>
       </div>
       <a href="/pages/dashboard.html" class="btn btn-ghost btn-sm">← Volver</a>
     </header>
@@ -338,12 +350,8 @@
     let selectedPlan = 'professional';
 
     // Clip button HTML per plan (replace with actual Clip button HTML)
-    const clipButtons = {
-      starter: '<a href="https://pago.clip.mx/v3/d4ea06f7-7377-4c6a-8e14-ec00c051398b" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
-      professional: '<a href="https://pago.clip.mx/v3/f2b15171-c8dd-4bae-83a3-d30ac4603b9b" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
-      business: '<a href="https://pago.clip.mx/v3/b86385c5-3212-4978-a9c5-065a9c94e595" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
-      enterprise: '<a href="https://pago.clip.mx/v3/fa097df0-aec1-4f9c-85ec-7d37b61ff360" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
-    };
+    // Plans redirect to checkout (not directly to Clip)
+    const planPrices = { starter: 20, professional: 99, business: 249, enterprise: 500 };
 
     document.querySelectorAll('.plan-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -360,7 +368,7 @@
 
       placeholder.style.display = 'none';
       container.style.display = 'block';
-      container.innerHTML = clipButtons[selectedPlan];
+      container.innerHTML = '<a href="/pages/checkout.html?plan=' + selectedPlan + '" class="btn btn-primary btn-lg btn-block">Continuar al pago — $' + planPrices[selectedPlan] + ' USD/mes</a>';
     }
 
     // Init
