@@ -468,13 +468,37 @@ tr:hover td { background: var(--bg-card-hover); }
 .empty-state h3 { color: var(--text-secondary); margin-bottom: 8px; }
 
 /* --- Responsive --- */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .container { padding: 0 16px; }
   h1 { font-size: 1.8rem; }
   h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.1rem; }
   .sidebar { display: none; }
   .navbar-nav { display: none; }
+  .btn-lg { padding: 12px 20px; font-size: 0.9rem; }
+  .card { padding: 16px; }
+  .form-input { padding: 8px 12px; font-size: 0.85rem; }
+  .table-wrap { font-size: 0.8rem; }
+  th, td { padding: 6px 10px; }
+  .modal { padding: 20px; margin: 16px; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .tab { white-space: nowrap; padding: 8px 14px; font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.2rem; }
+  .container { padding: 0 12px; }
+  .btn { padding: 8px 14px; font-size: 0.8rem; }
+  .btn-lg { padding: 10px 16px; }
+  .card { padding: 12px; border-radius: var(--radius-md); }
+  .form-group { margin-bottom: 14px; }
+  .badge { font-size: 0.65rem; padding: 2px 8px; }
 }
 
 /* --- Scrollbar --- */

@@ -248,6 +248,22 @@
     .config-row:last-child { border-bottom: none; }
     .config-label { font-size: 0.9rem; }
     .config-value { font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono); }
+
+    @media (max-width: 768px) {
+      .case-header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+      .case-header h1 { font-size: 1rem; }
+      .case-header-left { gap: 8px; }
+      .graph-toolbar { flex-wrap: wrap; gap: 4px; }
+      .graph-toolbar select { max-width: 120px; }
+      .oracle-input { flex-direction: column; }
+      .oracle-input input { width: 100%; }
+      .eer-diagram { flex-direction: column; }
+      .eer-table { min-width: 100%; }
+      .config-container { padding: 16px; }
+      .config-row { flex-direction: column; gap: 8px; }
+      .config-row select { max-width: 100%; }
+      .upload-zone { padding: 30px 16px; }
+    }
   </style>
 </head>
 <body>

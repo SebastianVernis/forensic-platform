@@ -201,12 +201,25 @@
       background: var(--success);
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 900px) and (min-width: 601px) {
       .plans-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 600px) {
-      .plans-grid { grid-template-columns: 1fr; }
+      .plans-grid {
+        grid-template-columns: 1fr;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        display: flex;
+        gap: 16px;
+        padding-bottom: 16px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .plan-card {
+        min-width: 280px;
+        flex-shrink: 0;
+        scroll-snap-align: center;
+      }
     }
   </style>
 </head>

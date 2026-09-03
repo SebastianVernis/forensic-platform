@@ -99,6 +99,15 @@
     .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
     .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
     .alert.visible { display: block; }
+
+    @media (max-width: 768px) {
+      .account-header { padding: 16px; flex-wrap: wrap; gap: 8px; }
+      .account-header h1 { font-size: 1.2rem; }
+      .account-content { padding: 16px; }
+      .profile-header { flex-direction: column; text-align: center; }
+      .form-row { flex-direction: column; }
+      .session-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
   </style>
 </head>
 <body>
