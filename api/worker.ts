@@ -387,6 +387,154 @@ app.post('/api/cases/:id/analyze', async (c) => {
 });
 
 // ============================================================
+// SUBSCRIPTION ROUTES
+// ============================================================
+
+// POST /api/subscribe/confirm — Register approved transaction
+app.post('/api/subscribe/confirm', async (c) => {
+  try {
+    const session = await requireAuth(c);
+    if (session instanceof Response) return session;
+
+    const { plan, tx_id, source } = await c.req.json();
+    if (!plan || !source) return c.json({ error: 'Plan y source requeridos' }, 400);
+
+    const validPlans: Record<string, number> = { starter: 20, professional: 99, business: 249, enterprise: 500 };
+    if (!validPlans[plan]) return c.json({ error: 'Plan inválido' }, 400);
+
+    // Generate transaction hash
+    const txData = `${session.userId}:${plan}:${tx_id}:${Date.now()}`;
+    const txHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txData));
+    const hashHex = Array.from(new Uint8Array(txHash)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // Check if this transaction was already registered
+    const existing = await c.env.DB.prepare('SELECT id FROM transactions WHERE tx_hash=?').bind(hashHex).first();
+    if (existing) return c.json({ ok: true, message: 'Transacción ya registrada' });
+
+    const txId = crypto.randomUUID();
+    const subId = crypto.randomUUID();
+    const now = new Date();
+    const expires = new Date(now);
+    expires.setMonth(expires.getMonth() + 1);
+
+    // Create subscription
+    await c.env.DB.prepare(
+      'INSERT OR REPLACE INTO subscriptions (id,user_id,plan,status,started_at,expires_at) VALUES (?,?,?,?,?,?)'
+    ).bind(subId, session.userId, plan, 'active', now.toISOString(), expires.toISOString()).run();
+
+    // Create transaction record
+    await c.env.DB.prepare(
+      'INSERT INTO transactions (id,user_id,subscription_id,plan,amount,provider,provider_tx_id,tx_hash,status,ip_address,user_agent,approved_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).bind(txId, session.userId, subId, plan, validPlans[plan], 'clip', tx_id || null, hashHex, 'approved', c.req.header('CF-Connecting-IP'), c.req.header('User-Agent'), now.toISOString()).run();
+
+    // Create onboarding record
+    await c.env.DB.prepare(
+      'INSERT OR IGNORE INTO onboarding (user_id,tour_started_at) VALUES (?,?)'
+    ).bind(session.userId, now.toISOString()).run();
+
+    await logAudit(c.env.DB, session.userId, 'subscription_activated', 'subscription', subId, { plan, tx_id, hash: hashHex });
+
+    return c.json({ ok: true, subscription_id: subId, expires_at: expires.toISOString(), tx_hash: hashHex });
+  } catch (err: any) {
+    console.error('Subscribe confirm error:', err);
+    return c.json({ error: 'Error interno', detail: err.message }, 500);
+  }
+});
+
+// POST /api/subscribe/declined — Register declined transaction
+app.post('/api/subscribe/declined', async (c) => {
+  try {
+    const session = await requireAuth(c);
+    if (session instanceof Response) return session;
+
+    const { plan, code, reason } = await c.req.json();
+    const txId = crypto.randomUUID();
+    const txData = `${session.userId}:${plan}:declined:${Date.now()}`;
+    const txHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txData)))).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    await c.env.DB.prepare(
+      'INSERT INTO transactions (id,user_id,plan,amount,provider,tx_hash,status,ip_address,user_agent) VALUES (?,?,?,?,?,?,?,?,?)'
+    ).bind(txId, session.userId, plan || 'unknown', 0, 'clip', txHash, 'declined', c.req.header('CF-Connecting-IP'), c.req.header('User-Agent')).run();
+
+    await logAudit(c.env.DB, session.userId, 'payment_declined', 'transaction', txId, { plan, code, reason });
+
+    return c.json({ ok: true });
+  } catch (err: any) {
+    return c.json({ error: 'Error interno', detail: err.message }, 500);
+  }
+});
+
+// GET /api/subscribe/status — Check subscription status
+app.get('/api/subscribe/status', async (c) => {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+
+  const sub = await c.env.DB.prepare(
+    'SELECT * FROM subscriptions WHERE user_id=? AND status="active" ORDER BY expires_at DESC LIMIT 1'
+  ).bind(session.userId).first();
+
+  if (!sub) return c.json({ has_subscription: false, plan: null, expires_at: null });
+
+  const expired = new Date(sub.expires_at as string) < new Date();
+  if (expired) {
+    await c.env.DB.prepare('UPDATE subscriptions SET status="expired" WHERE id=?').bind(sub.id).run();
+    return c.json({ has_subscription: false, plan: sub.plan, expired: true, expires_at: sub.expires_at });
+  }
+
+  return c.json({ has_subscription: true, plan: sub.plan, expires_at: sub.expires_at, started_at: sub.started_at });
+});
+
+// POST /api/onboarding/complete — Mark tour as completed
+app.post('/api/onboarding/complete', async (c) => {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+  await c.env.DB.prepare('UPDATE onboarding SET tour_completed=1, tour_completed_at=datetime("now") WHERE user_id=?').bind(session.userId).run();
+  return c.json({ ok: true });
+});
+
+// GET /api/onboarding/status — Check if tour was completed
+app.get('/api/onboarding/status', async (c) => {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+  const ob = await c.env.DB.prepare('SELECT tour_completed FROM onboarding WHERE user_id=?').bind(session.userId).first();
+  return c.json({ completed: ob?.tour_completed === 1 });
+});
+
+// POST /api/contact — Contact form
+app.post('/api/contact', async (c) => {
+  const { name, email, subject, message } = await c.req.json();
+  if (!name || !email || !message) return c.json({ error: 'Campos requeridos' }, 400);
+  await logAudit(c.env.DB, null, 'contact_form', null, null, { name, email, subject, message: message.substring(0, 500) }, c.req.header('CF-Connecting-IP'));
+  return c.json({ ok: true });
+});
+
+// ============================================================
+// SUBSCRIPTION MIDDLEWARE — Block access without active subscription
+// ============================================================
+
+async function requireSubscription(c: any) {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+
+  // Admin bypass
+  const user = await c.env.DB.prepare('SELECT role FROM users WHERE id=?').bind(session.userId).first();
+  if (user?.role === 'admin') return session;
+
+  const sub = await c.env.DB.prepare(
+    'SELECT expires_at FROM subscriptions WHERE user_id=? AND status="active" ORDER BY expires_at DESC LIMIT 1'
+  ).bind(session.userId).first();
+
+  if (!sub) return c.json({ error: 'Suscripción requerida', code: 'NO_SUBSCRIPTION' }, 403);
+
+  if (new Date(sub.expires_at as string) < new Date()) {
+    await c.env.DB.prepare('UPDATE subscriptions SET status="expired" WHERE user_id=? AND status="active"').bind(session.userId).run();
+    return c.json({ error: 'Suscripción expirada', code: 'SUBSCRIPTION_EXPIRED' }, 403);
+  }
+
+  return session;
+}
+
+// ============================================================
 // HEALTH
 // ============================================================
 

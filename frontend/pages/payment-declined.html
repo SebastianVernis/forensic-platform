@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pago no procesado — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .declined-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .declined-card { max-width: 520px; width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 48px 36px; text-align: center; }
+    .declined-icon { width: 88px; height: 88px; border-radius: 50%; background: rgba(239,68,68,0.1); border: 3px solid var(--danger); display: flex; align-items: center; justify-content: center; font-size: 2.8rem; margin: 0 auto 24px; color: var(--danger); }
+    .declined-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--danger); }
+    .declined-card .subtitle { color: var(--text-secondary); font-size: 1rem; margin-bottom: 28px; line-height: 1.6; }
+
+    .reasons-box { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; text-align: left; }
+    .reasons-box h3 { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; }
+    .reasons-box ul { list-style: none; padding: 0; margin: 0; }
+    .reasons-box li { font-size: 0.85rem; color: var(--text-muted); padding: 6px 0 6px 20px; position: relative; }
+    .reasons-box li::before { content: "•"; position: absolute; left: 4px; color: var(--text-muted); }
+
+    .error-detail { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 28px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); text-align: left; }
+
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+
+    .contact-box { margin-top: 24px; padding: 16px; background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); border-radius: var(--radius-md); }
+    .contact-box h4 { font-size: 0.9rem; color: var(--text-accent); margin-bottom: 8px; }
+    .contact-box p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
+    .contact-box a { color: var(--text-accent); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="declined-page">
+    <div class="declined-card">
+      <div class="declined-icon">✕</div>
+      <h1>Pago no procesado</h1>
+      <p class="subtitle">No pudimos completar tu transacción. No se ha realizado ningún cargo a tu tarjeta.</p>
+
+      <div class="error-detail" id="error-detail">
+        <strong>Código:</strong> <span id="error-code">PAYMENT_DECLINED</span><br>
+        <strong>Detalle:</strong> <span id="error-reason">Transacción rechazada por el procesador de pagos.</span>
+      </div>
+
+      <div class="reasons-box">
+        <h3>Causas comunes de rechazo:</h3>
+        <ul>
+          <li>Fondos insuficientes en la tarjeta</li>
+          <li>Datos de la tarjeta incorrectos o incompletos</li>
+          <li>La tarjeta ha expirado</li>
+          <li>El banco emisor rechazó la transacción por seguridad</li>
+          <li>Límite de compras en línea alcanzado</li>
+          <li>La tarjeta no está habilitada para compras internacionales</li>
+        </ul>
+      </div>
+
+      <div class="actions">
+        <a href="/pages/checkout.html" class="btn btn-primary btn-lg btn-block" id="retry-btn">Intentar nuevamente</a>
+        <a href="/pages/subscribe.html" class="btn btn-secondary btn-block">Elegir otro plan</a>
+      </div>
+
+      <div class="contact-box">
+        <h4>¿Necesitas ayuda?</h4>
+        <p>Si el problema persiste, nuestro equipo de soporte puede ayudarte.</p>
+        <p>
+          📧 <a href="mailto:soporte@forensic.ai">soporte@forensic.ai</a><br>
+          📞 <a href="tel:+525512345678">+52 55 1234 5678</a><br>
+          💬 <a href="https://wa.me/525512345678">WhatsApp</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get('reason') || 'Transacción rechazada por el procesador de pagos.';
+    const code = params.get('code') || 'PAYMENT_DECLINED';
+    const plan = params.get('plan') || '';
+
+    document.getElementById('error-code').textContent = code;
+    document.getElementById('error-reason').textContent = reason;
+
+    // Retry button goes to the same plan checkout
+    if (plan) {
+      document.getElementById('retry-btn').href = `/pages/checkout.html?plan=${plan}`;
+    }
+
+    // Register declined transaction
+    async function registerDeclined() {
+      try {
+        await fetch('/api/subscribe/declined', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ plan, code, reason }),
+        });
+      } catch(e) {}
+    }
+    registerDeclined();
+  </script>
+</body>
+</html>

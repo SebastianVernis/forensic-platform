@@ -339,7 +339,7 @@
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>Encriptación E2E</h3>
-        <p>Passwords con PBKDF2-SHA512 (600k iteraciones), sesiones con tokens SHA-256, API keys con AES-256-GCM. Sin datos en texto plano.</p>
+        <p>Passwords con PBKDF2-SHA512, sesiones con tokens SHA-256, API keys con AES-256-GCM. Sin datos en texto plano.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">👥</div>
@@ -383,46 +383,65 @@
   <section class="pricing" id="pricing">
     <div class="features-header">
       <h2>Planes simples y transparentes</h2>
-      <p>Sin sorpresas. Paga solo por lo que uses.</p>
+      <p>Sin sorpresas. Todos los planes incluyen análisis forense con IA, grafo relacional y exportación PDF.</p>
     </div>
     <div class="pricing-grid">
       <div class="pricing-card">
         <h3>Starter</h3>
-        <p class="text-secondary">Para casos individuales</p>
-        <div class="pricing-price">$0<span>/mes</span></div>
+        <p class="text-secondary">Para abogados independientes</p>
+        <div class="pricing-price">$20<span>/mes</span></div>
         <ul class="pricing-features">
-          <li>3 casos activos</li>
-          <li>100 páginas por caso</li>
-          <li>Análisis básico</li>
+          <li>5 casos activos</li>
+          <li>500 páginas por caso</li>
+          <li>Análisis forense básico</li>
+          <li>Grafo relacional</li>
           <li>Exportación PDF</li>
+          <li>Soporte por correo</li>
         </ul>
-        <a href="/pages/login.html" class="btn btn-secondary btn-block">Comenzar</a>
+        <a href="/pages/login.html?next=/pages/subscribe.html?plan=starter" target="_blank" class="btn btn-secondary btn-block">Elegir plan</a>
       </div>
       <div class="pricing-card featured">
         <h3>Professional</h3>
         <p class="text-secondary">Para despachos pequeños</p>
-        <div class="pricing-price">$49<span>/mes</span></div>
+        <div class="pricing-price">$99<span>/mes</span></div>
         <ul class="pricing-features">
-          <li>Casos ilimitados</li>
-          <li>10,000 páginas por caso</li>
+          <li>25 casos activos</li>
+          <li>5,000 páginas por caso</li>
           <li>Oráculo LLM incluido</li>
-          <li>Compartir con 5 usuarios</li>
+          <li>Modelo EER automático</li>
+          <li>Compartir con 3 usuarios</li>
           <li>Soporte prioritario</li>
         </ul>
-        <a href="/pages/login.html" class="btn btn-primary btn-block">Elegir plan</a>
+        <a href="/pages/login.html?next=/pages/subscribe.html?plan=professional" target="_blank" class="btn btn-primary btn-block">Elegir plan</a>
+      </div>
+      <div class="pricing-card">
+        <h3>Business</h3>
+        <p class="text-secondary">Para despachos medianos</p>
+        <div class="pricing-price">$249<span>/mes</span></div>
+        <ul class="pricing-features">
+          <li>100 casos activos</li>
+          <li>20,000 páginas por caso</li>
+          <li>Oráculo con modelos premium</li>
+          <li>Compartir con 10 usuarios</li>
+          <li>API de integración</li>
+          <li>Soporte telefónico</li>
+        </ul>
+        <a href="/pages/login.html?next=/pages/subscribe.html?plan=business" target="_blank" class="btn btn-secondary btn-block">Elegir plan</a>
       </div>
       <div class="pricing-card">
         <h3>Enterprise</h3>
         <p class="text-secondary">Para fiscalías y corporativos</p>
-        <div class="pricing-price">Custom</div>
+        <div class="pricing-price">$500<span>/mes</span></div>
         <ul class="pricing-features">
-          <li>Todo de Professional</li>
+          <li>Casos ilimitados</li>
+          <li>Páginas ilimitadas</li>
           <li>Usuarios ilimitados</li>
           <li>Modelos IA personalizados</li>
           <li>On-premise disponible</li>
           <li>SLA garantizado</li>
+          <li>Gerente de cuenta dedicado</li>
         </ul>
-        <a href="mailto:contacto@themis-ia.com" class="btn btn-secondary btn-block">Contactar</a>
+        <a href="/pages/login.html?next=/pages/subscribe.html?plan=enterprise" target="_blank" class="btn btn-secondary btn-block">Elegir plan</a>
       </div>
     </div>
   </section>

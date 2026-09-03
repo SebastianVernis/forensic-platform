@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.prod.website-files.com; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Checkout — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .checkout-page { min-height: 100vh; display: flex; flex-direction: column; }
+    .checkout-header { padding: 16px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); }
+    .checkout-header .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+    .checkout-header .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; color: white; }
+
+    .checkout-content { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 40px 24px; gap: 32px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    .checkout-summary { flex: 1; max-width: 500px; }
+    .checkout-payment { width: 380px; flex-shrink: 0; }
+
+    .checkout-summary h1 { font-size: 1.6rem; margin-bottom: 8px; }
+    .checkout-summary .subtitle { color: var(--text-secondary); margin-bottom: 28px; font-size: 0.95rem; }
+
+    .plan-detail { background: var(--bg-card); border: 2px solid var(--accent); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; }
+    .plan-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .plan-detail h2 { font-size: 1.3rem; }
+    .plan-detail .price { font-size: 2rem; font-weight: 800; color: var(--text-accent); }
+    .plan-detail .price span { font-size: 0.9rem; font-weight: 400; color: var(--text-muted); }
+
+    .benefits-list { list-style: none; padding: 0; margin: 0; }
+    .benefits-list li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text-secondary); }
+    .benefits-list li:last-child { border-bottom: none; }
+    .benefits-list li .icon { color: var(--success); font-weight: 700; flex-shrink: 0; width: 20px; text-align: center; }
+    .benefits-list li strong { color: var(--text-primary); }
+
+    .plan-change { text-align: center; margin-top: 16px; }
+    .plan-change a { font-size: 0.85rem; color: var(--text-muted); }
+
+    .payment-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
+    .payment-box h3 { margin-bottom: 16px; font-size: 1rem; }
+
+    .order-summary { margin-bottom: 20px; }
+    .order-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.9rem; }
+    .order-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+    .order-row .label { color: var(--text-secondary); }
+    .order-row.total { font-weight: 700; font-size: 1.1rem; }
+    .order-row.total .value { color: var(--text-accent); }
+
+    .clip-btn-container { text-align: center; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+    .clip-btn-container a { display: inline-block; transition: transform 0.2s; }
+    .clip-btn-container a:hover { transform: scale(1.02); }
+    .clip-btn-container img { height: 56px; }
+
+    .security-note { text-align: center; margin-top: 16px; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .security-note .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+    .terms-note { text-align: center; margin-top: 12px; font-size: 0.75rem; color: var(--text-muted); }
+    .terms-note a { color: var(--text-accent); }
+
+    .guarantee { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius-md); padding: 12px; margin-top: 16px; font-size: 0.8rem; color: var(--success); text-align: center; }
+
+    @media (max-width: 800px) {
+      .checkout-content { flex-direction: column; align-items: center; }
+      .checkout-payment { width: 100%; max-width: 500px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="checkout-page">
+    <header class="checkout-header">
+      <div class="logo"><div class="logo-icon">F</div><span>ForensicAI</span></div>
+      <a href="/pages/subscribe.html" class="btn btn-ghost btn-sm">← Cambiar plan</a>
+    </header>
+
+    <main class="checkout-content">
+      <!-- Left: Plan details -->
+      <div class="checkout-summary">
+        <h1>Confirma tu suscripción</h1>
+        <p class="subtitle">Revisa los beneficios de tu plan antes de proceder al pago.</p>
+
+        <div class="plan-detail" id="plan-detail">
+          <div class="plan-detail-header">
+            <h2 id="plan-name">Professional</h2>
+            <div class="price" id="plan-price">$99 <span>USD/mes</span></div>
+          </div>
+          <ul class="benefits-list" id="benefits-list"></ul>
+        </div>
+
+        <div class="plan-change">
+          <a href="/pages/subscribe.html">¿Necesitas otro plan? Ver opciones</a>
+        </div>
+      </div>
+
+      <!-- Right: Payment -->
+      <div class="checkout-payment">
+        <div class="payment-box">
+          <h3>Resumen del pedido</h3>
+          <div class="order-summary">
+            <div class="order-row">
+              <span class="label">Plan</span>
+              <span id="order-plan">Professional</span>
+            </div>
+            <div class="order-row">
+              <span class="label">Facturación</span>
+              <span>Mensual</span>
+            </div>
+            <div class="order-row">
+              <span class="label">Primer cobro</span>
+              <span id="order-date">Hoy</span>
+            </div>
+            <div class="order-row">
+              <span class="label">Próximo cobro</span>
+              <span id="order-next">—</span>
+            </div>
+            <div class="order-row total">
+              <span class="label">Total</span>
+              <span class="value" id="order-total">$99 USD</span>
+            </div>
+          </div>
+
+          <div class="clip-btn-container" id="clip-container"></div>
+
+          <div class="security-note">
+            <span class="dot"></span>
+            <span>Pagos seguros procesados por Clip · TLS 1.3 · PCI DSS Level 1</span>
+          </div>
+
+          <div class="terms-note">
+            Al continuar aceptas nuestros <a href="/pages/terms.html">Términos de servicio</a> y <a href="/pages/privacy.html">Política de privacidad</a>
+          </div>
+
+          <div class="guarantee">
+            ✓ Garantía de reembolso de 7 días. Sin preguntas.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const plans = {
+      starter: {
+        name: 'Starter', price: 20, display: '$20 USD',
+        benefits: [
+          '<strong>5 casos activos</strong> — Gestiona hasta 5 investigaciones simultáneas',
+          '<strong>500 páginas por caso</strong> — Análisis completo de expedientes medianos',
+          '<strong>Análisis forense básico</strong> — Detección de inconsistencias e incongruencias',
+          '<strong>Grafo relacional</strong> — Visualización de entidades y conexiones',
+          '<strong>Exportación PDF</strong> — Reportes descargables con nombres restaurados',
+          '<strong>Soporte por correo</strong> — Respuesta en 24-48 horas hábiles',
+        ],
+        clip: 'https://pago.clip.mx/v3/d4ea06f7-7377-4c6a-8e14-ec00c051398b',
+      },
+      professional: {
+        name: 'Professional', price: 99, display: '$99 USD',
+        benefits: [
+          '<strong>25 casos activos</strong> — Ideal para despachos con múltiples clientes',
+          '<strong>5,000 páginas por caso</strong> — Expedientes completos de gran volumen',
+          '<strong>Oráculo LLM incluido</strong> — Consulta en lenguaje natural sobre el caso',
+          '<strong>Modelo EER automático</strong> — Base de datos relacional generada por IA',
+          '<strong>Compartir con 3 usuarios</strong> — Colaboración en equipo con permisos granulares',
+          '<strong>Soporte prioritario</strong> — Respuesta en 4-8 horas, chat en horario laboral',
+          '<strong>4 dimensiones de análisis</strong> — Inconsistencias, incongruencias, trazabilidad, declaración vs. evidencia',
+        ],
+        clip: 'https://pago.clip.mx/v3/f2b15171-c8dd-4bae-83a3-d30ac4603b9b',
+      },
+      business: {
+        name: 'Business', price: 249, display: '$249 USD',
+        benefits: [
+          '<strong>100 casos activos</strong> — Capacidad para despachos medianos y fiscalías',
+          '<strong>20,000 páginas por caso</strong> — Expedientes masivos con cientos de tomos',
+          '<strong>Oráculo con modelos premium</strong> — GPT-4o, Claude Sonnet para análisis profundo',
+          '<strong>Compartir con 10 usuarios</strong> — Equipo completo con roles y auditoría',
+          '<strong>API de integración</strong> — Conecta con tus sistemas existentes',
+          '<strong>Soporte telefónico</strong> — Línea directa en horario laboral',
+          '<strong>Modelos IA personalizados</strong> — Configura el modelo por caso',
+          '<strong>Seudonimización avanzada</strong> — Protección PII con alias automáticos',
+        ],
+        clip: 'https://pago.clip.mx/v3/b86385c5-3212-4978-a9c5-065a9c94e595',
+      },
+      enterprise: {
+        name: 'Enterprise', price: 500, display: '$500 USD',
+        benefits: [
+          '<strong>Casos ilimitados</strong> — Sin restricciones de volumen',
+          '<strong>Páginas ilimitadas</strong> — Expedientes de cualquier tamaño',
+          '<strong>Usuarios ilimitados</strong> — Organización completa sin límites',
+          '<strong>Modelos IA personalizados</strong> — Entrena con tu propio corpus legal',
+          '<strong>On-premise disponible</strong> — Despliegue en tu propia infraestructura',
+          '<strong>SLA garantizado</strong> — 99.9% de disponibilidad con penalizaciones',
+          '<strong>Gerente de cuenta dedicado</strong> — Un punto de contacto directo',
+          '<strong>SSO/SAML</strong> — Integración con tu directorio corporativo',
+          '<strong>Auditoría avanzada</strong> — Logs completos de todas las acciones',
+        ],
+        clip: 'https://pago.clip.mx/v3/fa097df0-aec1-4f9c-85ec-7d37b61ff360',
+      },
+    };
+
+    // Get plan from URL
+    const params = new URLSearchParams(window.location.search);
+    const planKey = params.get('plan') || 'professional';
+    const plan = plans[planKey] || plans.professional;
+
+    // Render plan details
+    document.getElementById('plan-name').textContent = plan.name;
+    document.getElementById('plan-price').innerHTML = `${plan.display.split(' ')[0]} <span>USD/mes</span>`;
+    document.getElementById('benefits-list').innerHTML = plan.benefits.map(b => `<li><span class="icon">✓</span><span>${b}</span></li>`).join('');
+
+    // Render order summary
+    document.getElementById('order-plan').textContent = plan.name;
+    document.getElementById('order-total').textContent = plan.display;
+    const today = new Date();
+    document.getElementById('order-date').textContent = today.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+    const next = new Date(today);
+    next.setMonth(next.getMonth() + 1);
+    document.getElementById('order-next').textContent = next.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // Render Clip button
+    document.getElementById('clip-container').innerHTML = `<a href="${plan.clip}" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip"></a>`;
+
+    // Auth check
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(res => { if (!res.ok) window.location.href = '/pages/login.html'; })
+      .catch(() => window.location.href = '/pages/login.html');
+  </script>
+</body>
+</html>

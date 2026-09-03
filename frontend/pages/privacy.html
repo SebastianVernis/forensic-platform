@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <title>Política de privacidad — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .legal-page { max-width: 800px; margin: 0 auto; padding: 40px 24px 80px; }
+    .legal-page h1 { font-size: 2rem; margin-bottom: 8px; }
+    .legal-page .updated { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 32px; }
+    .legal-page h2 { font-size: 1.3rem; margin-top: 32px; margin-bottom: 12px; color: var(--text-accent); }
+    .legal-page h3 { font-size: 1.1rem; margin-top: 24px; margin-bottom: 8px; }
+    .legal-page p, .legal-page li { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px; }
+    .legal-page ul, .legal-page ol { padding-left: 24px; margin-bottom: 16px; }
+    .legal-page li { margin-bottom: 6px; }
+    .legal-page .back { display: inline-block; margin-bottom: 24px; color: var(--text-muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="legal-page">
+    <a href="/" class="back">← Volver al inicio</a>
+    <h1>Política de Privacidad</h1>
+    <p class="updated">Última actualización: 2 de septiembre de 2026</p>
+
+    <h2>1. Información que recopilamos</h2>
+    <h3>1.1 Información de registro</h3>
+    <p>Al crear su cuenta, recopilamos: nombre, apellido, correo electrónico, teléfono (opcional) y organización (opcional).</p>
+
+    <h3>1.2 Información de pago</h3>
+    <p>Los pagos son procesados por Clip. ForensicAI no almacena números de tarjeta de crédito ni datos financieros sensibles. Solo recibimos confirmaciones de pago y un identificador de transacción.</p>
+
+    <h3>1.3 Documentos cargados</h3>
+    <p>Los expedientes y documentos que usted cargue se almacenan de forma encriptada en infraestructura Cloudflare (R2). Solo usted y los usuarios con quienes comparta el caso pueden acceder a estos documentos.</p>
+
+    <h3>1.4 Datos de uso</h3>
+    <p>Recopilamos automáticamente: dirección IP, tipo de navegador, páginas visitadas, fecha y hora de acceso, y acciones realizadas en la plataforma (audit log).</p>
+
+    <h2>2. Cómo utilizamos su información</h2>
+    <ul>
+      <li>Proporcionar y mantener el servicio de análisis forense</li>
+      <li>Procesar pagos y gestionar suscripciones</li>
+      <li>Enviar notificaciones sobre su cuenta y casos</li>
+      <li>Mejorar la plataforma y desarrollar nuevas funcionalidades</li>
+      <li>Cumplir con obligaciones legales</li>
+      <li>Prevenir fraude y abuso de la plataforma</li>
+    </ul>
+
+    <h2>3. Encriptación y seguridad</h2>
+    <p>Implementamos las siguientes medidas de seguridad:</p>
+    <ul>
+      <li><strong>Contraseñas:</strong> PBKDF2-SHA512 con 100,000 iteraciones y salt aleatorio de 32 bytes</li>
+      <li><strong>Sesiones:</strong> Tokens SHA-256 con expiración automática de 24 horas</li>
+      <li><strong>API keys:</strong> Encriptación AES-256-GCM con clave derivada por PBKDF2</li>
+      <li><strong>Transmisión:</strong> TLS 1.3 en todas las comunicaciones</li>
+      <li><strong>Almacenamiento:</strong> Datos encriptados en reposo en Cloudflare R2 y D1</li>
+      <li><strong>Cookies:</strong> HttpOnly, Secure, SameSite=Strict</li>
+      <li><strong>Headers:</strong> CSP, X-Frame-Options, X-Content-Type-Options en todas las páginas</li>
+    </ul>
+
+    <h2>4. Protección de datos del expediente</h2>
+    <h3>4.1 Seudonimización</h3>
+    <p>Durante el análisis, todos los nombres de personas y vehículos son reemplazados por alias (PERSONA_001, VEHICULO_002, etc.). Los nombres reales solo se restauran en el reporte final.</p>
+
+    <h3>4.2 Aislamiento por caso</h3>
+    <p>Cada caso es completamente aislado. Los datos de un caso nunca se mezclan con los de otro caso o usuario.</p>
+
+    <h3>4.3 Modelos de IA</h3>
+    <p>Los documentos se procesan mediante modelos de IA (configurables por caso). Los datos enviados a servicios de IA de terceros (OpenAI, Anthropic, etc.) están sujetos a las políticas de privacidad de dichos servicios. Recomendamos usar modelos locales (Ollama) para casos con información altamente sensible.</p>
+
+    <h2>5. Compartición de datos</h2>
+    <p>No vendemos ni compartimos su información personal con terceros, excepto:</p>
+    <ul>
+      <li><strong>Procesadores de pago:</strong> Clip para procesar transacciones</li>
+      <li><strong>Proveedores de IA:</strong> OpenAI, Anthropic, Google (solo cuando usted configura estos modelos)</li>
+      <li><strong>Infraestructura:</strong> Cloudflare para hosting, almacenamiento y seguridad</li>
+      <li><strong>Obligación legal:</strong> Cuando sea requerido por autoridad competente</li>
+    </ul>
+
+    <h2>6. Retención de datos</h2>
+    <ul>
+      <li><strong>Datos de cuenta:</strong> Mientras su cuenta esté activa + 30 días después de la eliminación</li>
+      <li><strong>Documentos:</strong> Mientras el caso esté activo. Se eliminan al eliminar el caso o la cuenta</li>
+      <li><strong>Audit log:</strong> 12 meses para fines de seguridad y cumplimiento</li>
+      <li><strong>Datos de pago:</strong> 5 años según la legislación fiscal mexicana</li>
+    </ul>
+
+    <h2>7. Sus derechos</h2>
+    <p>Usted tiene derecho a:</p>
+    <ul>
+      <li><strong>Acceso:</strong> Solicitar una copia de sus datos personales</li>
+      <li><strong>Rectificación:</strong> Corregir datos inexactos</li>
+      <li><strong>Eliminación:</strong> Solicitar la eliminación de sus datos</li>
+      <li><strong>Portabilidad:</strong> Recibir sus datos en formato estructurado</li>
+      <li><strong>Oposición:</strong> Oponerse al procesamiento de sus datos</li>
+    </ul>
+    <p>Para ejercer estos derechos, contacte a <a href="mailto:privacidad@forensic.ai">privacidad@forensic.ai</a>.</p>
+
+    <h2>8. Cookies</h2>
+    <p>Utilizamos cookies exclusivamente para:</p>
+    <ul>
+      <li><strong>Autenticación:</strong> Cookie de sesión HttpOnly para mantener su sesión activa</li>
+      <li><strong>CSRF:</strong> Cookie de token para protección contra ataques CSRF</li>
+    </ul>
+    <p>No utilizamos cookies de rastreo, publicidad ni análisis de terceros.</p>
+
+    <h2>9. Transferencias internacionales</h2>
+    <p>Sus datos se almacenan en servidores de Cloudflare con presencia global. Cloudflare cumple con el RGPD y tiene certificación SOC 2 Type II.</p>
+
+    <h2>10. Menores de edad</h2>
+    <p>La Plataforma no está dirigida a menores de 18 años. No recopilamos intencionalmente información de menores.</p>
+
+    <h2>11. Cambios a esta política</h2>
+    <p>Los cambios significativos serán notificados por correo electrónico con al menos 30 días de anticipación.</p>
+
+    <h2>12. Contacto</h2>
+    <p>Para preguntas sobre esta política:</p>
+    <ul>
+      <li>Correo: <a href="mailto:privacidad@forensic.ai">privacidad@forensic.ai</a></li>
+      <li>Teléfono: <a href="tel:+525512345678">+52 55 1234 5678</a></li>
+      <li>Responsable: Oficial de Protección de Datos, ForensicAI</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.clip.com.mx; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.clip.com.mx; frame-src https://cdn.clip.com.mx;">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Suscripción — ForensicAI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .subscribe-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .subscribe-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+    }
+
+    .subscribe-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .subscribe-header .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: white;
+    }
+
+    .subscribe-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .subscribe-container {
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    .subscribe-title {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .subscribe-title h1 { font-size: 2rem; margin-bottom: 8px; }
+    .subscribe-title p { color: var(--text-secondary); font-size: 1rem; }
+
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .plan-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .plan-card:hover { border-color: var(--accent); }
+    .plan-card.selected { border-color: var(--accent); box-shadow: var(--shadow-glow); }
+
+    .plan-card .badge-popular {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: white;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .plan-card h3 { font-size: 1rem; margin-bottom: 4px; }
+    .plan-card .plan-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; }
+    .plan-card .plan-price { font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+    .plan-card .plan-price span { font-size: 0.9rem; font-weight: 400; color: var(--text-muted); }
+    .plan-card .plan-period { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; }
+
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .plan-features li {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding: 5px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .plan-features li::before {
+      content: "✓";
+      color: var(--success);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .plan-radio {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .plan-card.selected .plan-radio {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .plan-card.selected .plan-radio::after {
+      content: "✓";
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .payment-section {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .payment-section h2 {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .clip-button-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clip-button-container .placeholder {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .security-note {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .security-note .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    @media (max-width: 900px) {
+      .plans-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      .plans-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="subscribe-page">
+    <header class="subscribe-header">
+      <div class="logo">
+        <div class="logo-icon">FA</div>
+        <span>ForensicAI</span>
+      </div>
+      <a href="/pages/dashboard.html" class="btn btn-ghost btn-sm">← Volver</a>
+    </header>
+
+    <main class="subscribe-content">
+      <div class="subscribe-container">
+        <div class="subscribe-title">
+          <h1>Elige tu plan</h1>
+          <p>Selecciona el plan que mejor se adapte a tu despacho y comienza a analizar expedientes con IA.</p>
+        </div>
+
+        <!-- Plans -->
+        <div class="plans-grid">
+          <div class="plan-card" data-plan="starter" data-price="20">
+            <div class="plan-radio"></div>
+            <h3>Starter</h3>
+            <div class="plan-desc">Para abogados independientes</div>
+            <div class="plan-price">$20 <span>USD</span></div>
+            <div class="plan-period">por mes</div>
+            <ul class="plan-features">
+              <li>5 casos activos</li>
+              <li>500 páginas por caso</li>
+              <li>Análisis forense básico</li>
+              <li>Grafo relacional</li>
+              <li>Exportación PDF</li>
+              <li>Soporte por correo</li>
+            </ul>
+          </div>
+
+          <div class="plan-card selected" data-plan="professional" data-price="99">
+            <div class="badge-popular">Popular</div>
+            <div class="plan-radio"></div>
+            <h3>Professional</h3>
+            <div class="plan-desc">Para despachos pequeños</div>
+            <div class="plan-price">$99 <span>USD</span></div>
+            <div class="plan-period">por mes</div>
+            <ul class="plan-features">
+              <li>25 casos activos</li>
+              <li>5,000 páginas por caso</li>
+              <li>Oráculo LLM incluido</li>
+              <li>Modelo EER automático</li>
+              <li>Compartir con 3 usuarios</li>
+              <li>Soporte prioritario</li>
+            </ul>
+          </div>
+
+          <div class="plan-card" data-plan="business" data-price="249">
+            <div class="plan-radio"></div>
+            <h3>Business</h3>
+            <div class="plan-desc">Para despachos medianos</div>
+            <div class="plan-price">$249 <span>USD</span></div>
+            <div class="plan-period">por mes</div>
+            <ul class="plan-features">
+              <li>100 casos activos</li>
+              <li>20,000 páginas por caso</li>
+              <li>Oráculo con modelos premium</li>
+              <li>Compartir con 10 usuarios</li>
+              <li>API de integración</li>
+              <li>Soporte telefónico</li>
+            </ul>
+          </div>
+
+          <div class="plan-card" data-plan="enterprise" data-price="500">
+            <div class="plan-radio"></div>
+            <h3>Enterprise</h3>
+            <div class="plan-desc">Para fiscalías y corporativos</div>
+            <div class="plan-price">$500 <span>USD</span></div>
+            <div class="plan-period">por mes</div>
+            <ul class="plan-features">
+              <li>Casos ilimitados</li>
+              <li>Páginas ilimitadas</li>
+              <li>Usuarios ilimitados</li>
+              <li>Modelos IA personalizados</li>
+              <li>On-premise disponible</li>
+              <li>SLA garantizado</li>
+              <li>Gerente de cuenta dedicado</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Payment -->
+        <div class="payment-section">
+          <h2>Método de pago</h2>
+          <div class="clip-button-container" id="clip-container">
+            <!-- Clip payment button will be injected here -->
+            <div class="placeholder" id="clip-placeholder">
+              Selecciona un plan para continuar con el pago
+            </div>
+            <!-- CLIP BUTTON AREA — Replace with actual Clip HTML -->
+            <div id="clip-button" style="display:none;"></div>
+          </div>
+
+          <div class="security-note">
+            <span class="dot"></span>
+            <span>Pagos procesados por Clip · TLS 1.3 · PCI DSS Level 1</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ============================================================
+    // Plan Selection
+    // ============================================================
+    let selectedPlan = 'professional';
+
+    // Clip button HTML per plan (replace with actual Clip button HTML)
+    const clipButtons = {
+      starter: '<a href="https://pago.clip.mx/v3/d4ea06f7-7377-4c6a-8e14-ec00c051398b" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
+      professional: '<a href="https://pago.clip.mx/v3/f2b15171-c8dd-4bae-83a3-d30ac4603b9b" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
+      business: '<a href="https://pago.clip.mx/v3/b86385c5-3212-4978-a9c5-065a9c94e595" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
+      enterprise: '<a href="https://pago.clip.mx/v3/fa097df0-aec1-4f9c-85ec-7d37b61ff360" target="_blank"><img src="https://cdn.prod.website-files.com/62588b32d8d6105ab7aa9721/63bf568610f3fdf437235192_Preview.svg" alt="Paga con Clip" style="height:60px;"></a>',
+    };
+
+    document.querySelectorAll('.plan-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedPlan = card.dataset.plan;
+        updateClipButton();
+      });
+    });
+
+    function updateClipButton() {
+      const container = document.getElementById('clip-button');
+      const placeholder = document.getElementById('clip-placeholder');
+
+      placeholder.style.display = 'none';
+      container.style.display = 'block';
+      container.innerHTML = clipButtons[selectedPlan];
+    }
+
+    // Init
+    updateClipButton();
+
+    // Auth check
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(res => { if (!res.ok) window.location.href = '/pages/login.html'; })
+      .catch(() => window.location.href = '/pages/login.html');
+  </script>
+</body>
+</html>

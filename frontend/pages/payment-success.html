@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="robots" content="noindex, nofollow">
+  <title>¡Bienvenido a ForensicAI!</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .success-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; overflow: hidden; }
+    .success-card { max-width: 560px; width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 48px 36px; text-align: center; position: relative; z-index: 1; }
+    .success-icon { width: 88px; height: 88px; border-radius: 50%; background: rgba(34,197,94,0.12); border: 3px solid var(--success); display: flex; align-items: center; justify-content: center; font-size: 2.8rem; margin: 0 auto 24px; animation: popIn 0.5s ease; }
+    @keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    .success-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--success); }
+    .success-card .subtitle { color: var(--text-secondary); font-size: 1rem; margin-bottom: 28px; line-height: 1.6; }
+
+    .benefits-confirmed { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; text-align: left; }
+    .benefits-confirmed h3 { font-size: 0.9rem; color: var(--text-accent); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .benefit-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; font-size: 0.85rem; color: var(--text-secondary); }
+    .benefit-item:not(:last-child) { border-bottom: 1px solid var(--border); }
+    .benefit-item .check { color: var(--success); font-weight: 700; flex-shrink: 0; }
+
+    .tx-info { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 28px; font-size: 0.8rem; color: var(--text-muted); }
+    .tx-row { display: flex; justify-content: space-between; padding: 3px 0; }
+
+    /* Tour overlay */
+    .tour-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); z-index: 2000; display: none; }
+    .tour-overlay.active { display: block; }
+    .tour-step { position: fixed; z-index: 2001; background: var(--bg-card); border: 2px solid var(--accent); border-radius: var(--radius-lg); padding: 20px; max-width: 360px; box-shadow: var(--shadow-lg); }
+    .tour-step h4 { margin-bottom: 8px; color: var(--text-accent); }
+    .tour-step p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+    .tour-step .tour-actions { display: flex; justify-content: space-between; align-items: center; }
+    .tour-step .tour-progress { font-size: 0.75rem; color: var(--text-muted); }
+    .tour-step .tour-dots { display: flex; gap: 6px; }
+    .tour-step .tour-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+    .tour-step .tour-dot.active { background: var(--accent); }
+
+    .confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; overflow: hidden; }
+    .confetti-piece { position: absolute; width: 10px; height: 10px; top: -10px; animation: confettiFall 3s ease-in forwards; }
+    @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <h1>¡Bienvenido a ForensicAI!</h1>
+      <p class="subtitle">Tu suscripción ha sido activada. Ya puedes comenzar a analizar expedientes con inteligencia artificial.</p>
+
+      <div class="benefits-confirmed" id="benefits-confirmed"></div>
+
+      <div class="tx-info" id="tx-info">
+        <div class="tx-row"><span>ID de transacción</span><span id="tx-id">—</span></div>
+        <div class="tx-row"><span>Fecha de activación</span><span id="tx-date">—</span></div>
+        <div class="tx-row"><span>Vigencia hasta</span><span id="tx-expires">—</span></div>
+      </div>
+
+      <button class="btn btn-primary btn-lg btn-block" id="start-tour-btn">Comenzar recorrido por la plataforma</button>
+      <a href="/pages/dashboard.html" class="btn btn-ghost btn-block" style="margin-top:8px;">Saltar recorrido</a>
+    </div>
+  </div>
+
+  <div class="confetti" id="confetti"></div>
+
+  <!-- Tour overlay -->
+  <div class="tour-overlay" id="tour-overlay"></div>
+  <div class="tour-step" id="tour-step" style="display:none;"></div>
+
+  <script>
+    const planBenefits = {
+      starter: ['5 casos activos', '500 páginas por caso', 'Análisis forense básico', 'Grafo relacional', 'Exportación PDF', 'Soporte por correo'],
+      professional: ['25 casos activos', '5,000 páginas por caso', 'Oráculo LLM incluido', 'Modelo EER automático', 'Compartir con 3 usuarios', 'Soporte prioritario'],
+      business: ['100 casos activos', '20,000 páginas por caso', 'Oráculo modelos premium', 'Compartir con 10 usuarios', 'API de integración', 'Soporte telefónico'],
+      enterprise: ['Casos ilimitados', 'Páginas ilimitadas', 'Usuarios ilimitados', 'Modelos IA personalizados', 'On-premise disponible', 'SLA garantizado', 'Gerente de cuenta'],
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan') || 'professional';
+    const txId = params.get('tx_id') || '—';
+
+    // Render benefits
+    const benefits = planBenefits[plan] || planBenefits.professional;
+    document.getElementById('benefits-confirmed').innerHTML = `
+      <h3>Beneficios de tu plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}</h3>
+      ${benefits.map(b => `<div class="benefit-item"><span class="check">✓</span><span>${b}</span></div>`).join('')}
+    `;
+
+    // TX info
+    document.getElementById('tx-id').textContent = txId;
+    const now = new Date();
+    document.getElementById('tx-date').textContent = now.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+    const expires = new Date(now); expires.setMonth(expires.getMonth() + 1);
+    document.getElementById('tx-expires').textContent = expires.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // Confetti
+    (function() {
+      const c = document.getElementById('confetti');
+      const colors = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a78bfa','#38bdf8'];
+      for (let i = 0; i < 60; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.left = Math.random()*100+'%';
+        p.style.background = colors[Math.floor(Math.random()*colors.length)];
+        p.style.animationDelay = Math.random()*2+'s';
+        p.style.animationDuration = (2+Math.random()*2)+'s';
+        p.style.width = (6+Math.random()*8)+'px';
+        p.style.height = (6+Math.random()*8)+'px';
+        p.style.borderRadius = Math.random()>0.5?'50%':'0';
+        c.appendChild(p);
+      }
+    })();
+
+    // Register transaction in DB
+    async function registerTransaction() {
+      try {
+        await fetch('/api/subscribe/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ plan, tx_id: txId, source: 'clip_redirect' }),
+        });
+      } catch(e) { console.error('Error registering transaction:', e); }
+    }
+    registerTransaction();
+
+    // Tour
+    const tourSteps = [
+      { title: '📁 Dashboard', text: 'Aquí verás todos tus casos. Crea uno nuevo con el botón "+". Cada caso se mantiene separado y seguro.', pos: 'center' },
+      { title: '📄 Cargar documentos', text: 'Sube PDFs, textos e imágenes del expediente. El sistema extrae texto automáticamente con OCR.', pos: 'center' },
+      { title: '🔍 Análisis forense', text: 'La IA analiza cada fragmento en 4 dimensiones: inconsistencias, incongruencias, trazabilidad y declaración vs. evidencia.', pos: 'center' },
+      { title: '🔗 Grafo relacional', text: 'Visualiza personas, vehículos, lugares y sus conexiones. Detecta patrones ocultos entre entidades.', pos: 'center' },
+      { title: '🤖 Oráculo', text: 'Pregunta en lenguaje natural sobre el caso. El oráculo conoce el expediente completo y responde con referencias.', pos: 'center' },
+      { title: '⚙️ Configuración', text: 'Configura los modelos de IA por caso, gestiona tu cuenta y revisa el historial de sesiones.', pos: 'center' },
+    ];
+
+    let currentStep = 0;
+
+    document.getElementById('start-tour-btn').addEventListener('click', () => {
+      currentStep = 0;
+      showTourStep();
+    });
+
+    function showTourStep() {
+      const overlay = document.getElementById('tour-overlay');
+      const step = document.getElementById('tour-step');
+      overlay.classList.add('active');
+      step.style.display = 'block';
+
+      const s = tourSteps[currentStep];
+      step.innerHTML = `
+        <h4>${s.title}</h4>
+        <p>${s.text}</p>
+        <div class="tour-actions">
+          <div class="tour-dots">${tourSteps.map((_,i) => `<div class="tour-dot ${i===currentStep?'active':''}"></div>`).join('')}</div>
+          <div>
+            ${currentStep > 0 ? '<button class="btn btn-ghost btn-sm" id="tour-prev">Atrás</button>' : ''}
+            <button class="btn btn-primary btn-sm" id="tour-next">${currentStep < tourSteps.length - 1 ? 'Siguiente' : '¡Entendido!'}</button>
+          </div>
+        </div>
+      `;
+
+      // Center the step
+      step.style.top = '50%'; step.style.left = '50%';
+      step.style.transform = 'translate(-50%, -50%)';
+
+      document.getElementById('tour-next').addEventListener('click', () => {
+        if (currentStep < tourSteps.length - 1) { currentStep++; showTourStep(); }
+        else { endTour(); }
+      });
+
+      const prev = document.getElementById('tour-prev');
+      if (prev) prev.addEventListener('click', () => { currentStep--; showTourStep(); });
+    }
+
+    async function endTour() {
+      document.getElementById('tour-overlay').classList.remove('active');
+      document.getElementById('tour-step').style.display = 'none';
+      try { await fetch('/api/onboarding/complete', { method: 'POST', credentials: 'same-origin' }); } catch(e) {}
+      window.location.href = '/pages/dashboard.html';
+    }
+  </script>
+</body>
+</html>
