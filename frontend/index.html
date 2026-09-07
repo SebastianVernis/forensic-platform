@@ -31,27 +31,7 @@
       overflow: hidden;
     }
 
-    .hero::before {
-      content: "";
-      position: absolute;
-      top: -200px;
-      right: -200px;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
-      border-radius: 50%;
-    }
 
-    .hero::after {
-      content: "";
-      position: absolute;
-      bottom: -300px;
-      left: -200px;
-      width: 800px;
-      height: 800px;
-      background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
-      border-radius: 50%;
-    }
 
     .hero-content { position: relative; z-index: 1; max-width: 800px; }
 
@@ -107,7 +87,7 @@
     /* Features */
     .features {
       padding: 100px 24px;
-      background: var(--bg-secondary);
+      background: transparent;
     }
 
     .features-header {
@@ -128,7 +108,7 @@
     }
 
     .feature-card {
-      background: var(--bg-card);
+      background: transparent;
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 28px;
@@ -204,7 +184,7 @@
     /* Pricing */
     .pricing {
       padding: 100px 24px;
-      background: var(--bg-secondary);
+      background: transparent;
     }
 
     .pricing-grid {
@@ -217,7 +197,7 @@
     }
 
     .pricing-card {
-      background: var(--bg-card);
+      background: transparent;
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 28px 24px;
@@ -266,7 +246,6 @@
     /* Footer */
     .site-footer {
       padding: 40px 24px;
-      border-top: 1px solid var(--border);
       text-align: center;
       font-size: 0.85rem;
       color: var(--text-muted);
@@ -317,40 +296,132 @@
       }
       .pricing-card { min-width: auto; }
     }
+
+    /* ==== Themis animated background ==== */
+    .themis-bg{z-index:0;pointer-events:none;
+      position:fixed;inset:0;z-index:-1;overflow:hidden;
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 42%, #182252 0%, #0F1633 45%, #0B1026 70%, #060915 100%);
+    }
+    .themis-bg::before{
+      content:"";position:absolute;inset:0;
+      background:repeating-linear-gradient(
+        to bottom, transparent 0 55px, rgba(201,205,213,.05) 55px 56px);
+      mask-image:radial-gradient(ellipse 60% 70% at 50% 45%, #000 20%, transparent 100%);
+      -webkit-mask-image:radial-gradient(ellipse 60% 70% at 50% 45%, #000 20%, transparent 100%);
+    }
+    .themis-bg::after{
+      content:"";position:absolute;inset:0;opacity:.055;mix-blend-mode:overlay;pointer-events:none;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+    .themis-bg svg{pointer-events:none;
+      position:absolute;left:0;right:0;bottom:0;width:100%;height:18vh;opacity:.5;
+    }
+    .themis-bg .ecg{
+      fill:none;stroke:#38C6D8;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+      vector-effect:non-scaling-stroke;
+      stroke-dasharray:1200 4000;stroke-dashoffset:5200;
+      animation:themis-pulse 14s linear infinite;
+      filter:drop-shadow(0 0 6px rgba(56,198,216,.35));
+    }
+    .themis-bg .ecg-ghost{fill:none;stroke:#38C6D8;stroke-width:1.1;opacity:.16;vector-effect:non-scaling-stroke}
+    @keyframes themis-pulse{to{stroke-dashoffset:0}}
+    @media(prefers-reduced-motion:reduce){.themis-bg .ecg{animation:none;stroke-dasharray:none;opacity:.6}}
+
+    /* ==== Hero fullscreen with scroll-hide ==== */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 12vh 24px;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .hero.hide {
+      opacity: 0;
+      transform: translateY(-60px);
+      pointer-events: none;
+    }
+
+    /* ==== Floating navbar (hidden until scroll) ==== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(11,16,38,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(42,53,80,0.5);
+      transform: translateY(-100%);
+      transition: transform 0.4s ease;
+    }
+    .navbar.show {
+      transform: translateY(0);
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .navbar-brand img { height: 28px; }
+    .navbar-brand .brand-text { font-family: Michroma, sans-serif; font-size: 15px; font-weight: 400; letter-spacing: .12em; }
+    .navbar-brand .ia { color: #38C6D8; }
+    .navbar-nav { display: flex; gap: 20px; align-items: center; }
+    .navbar-nav a { color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+    .navbar-nav a:hover { color: var(--text-primary); }
+    
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar">
+<!-- Themis animated background -->
+<div class="themis-bg" aria-hidden="true">
+  <svg viewBox="0 0 1600 260" preserveAspectRatio="none">
+    <path class="ecg-ghost" d="M0 130 H420 L470 130 L488 96 L512 176 L536 130 H900 L950 130 L966 108 L984 150 L1004 130 H1600"/>
+    <path class="ecg" d="M0 130 H420 L470 130 L488 96 L512 176 L536 130 H900 L950 130 L966 108 L984 150 L1004 130 H1600"/>
+  </svg>
+</div>
+
+  <!-- Navbar (appears on scroll) -->
+  <nav class="navbar" id="navbar" style="position:fixed;top:0;left:0;right:0;z-index:1000;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(11,16,38,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(42,53,80,0.5);transform:translateY(-100%);transition:transform 0.4s ease">
     <a href="/" class="navbar-brand">
-      <div class="logo"><img src="assets/themis-ia_isotipo_mono-blanco.svg" alt="Themis IA"></div>
+      <img src="assets/themis-ia_isotipo_mono-blanco.svg" alt="Themis IA">
       <span class="brand-text">THEMIS <span class="ia">IA</span></span>
     </a>
     <div class="navbar-nav">
       <a href="#features">Características</a>
       <a href="#how">Cómo funciona</a>
       <a href="#pricing">Precios</a>
-      <a href="/pages/login.html" class="btn btn-primary btn-sm">Iniciar sesión</a>
+      <a href="/login.html" class="btn btn-primary btn-sm">Iniciar sesión</a>
     </div>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero (fullscreen, hides on scroll) -->
   <section class="hero">
-    <div class="hero-content">
-      <div class="hero-badge">⚖️ Plataforma de análisis forense con IA</div>
-      <h1>Analiza expedientes legales con inteligencia artificial</h1>
-      <p>Carga tus carpetas de investigación, detecta inconsistencias, mapea entidades y genera reportes forenses automáticos. Protegido con encriptación de grado militar.</p>
-      <div class="hero-actions">
-        <a href="/pages/login.html" class="btn btn-primary btn-lg">Comenzar gratis</a>
+    <div>
+      <svg class="hero-logo-svg" viewBox="0 0 600 600" role="img" aria-label="Themis IA" style="width:min(160px,32vw);margin:0 auto 32px;display:block">
+        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F3F5"/><stop offset="1" stop-color="#9AA0AB"/></linearGradient></defs>
+        <path stroke="url(#sg)" stroke-width="8.3" opacity=".35" fill="none" stroke-linecap="round" d="M196.7 217.4 L403.3 217.4 M207.1 386.7 L392.9 386.7"/>
+        <path stroke="#38C6D8" stroke-width="14.5" fill="none" stroke-linecap="round" stroke-linejoin="round" d="M151.3 300 L250.4 300 L275.2 238 L304.1 374.3 L333 300 L448.7 300"/>
+        <circle stroke="url(#sg)" stroke-width="22.7" fill="none" cx="300" cy="300" r="190"/>
+        <path stroke="url(#sg)" stroke-width="33" fill="none" stroke-linecap="round" d="M440.4 440.4 L552 552"/>
+      </svg>
+      <h1 style="font-family:Michroma,sans-serif;font-weight:400;font-size:clamp(22px,4.2vw,44px);letter-spacing:.18em;margin:0;text-align:center">THEMIS <span style="color:#38C6D8">IA</span></h1>
+      <p style="max-width:52ch;margin:24px auto 0;font-size:clamp(15px,1.4vw,18px);line-height:1.6;color:#7C8496;text-align:center">Análisis forense de expedientes médicos con inteligencia artificial. Cronologías, inconsistencias y hallazgos periciales listos para dictamen.</p>
+      <div class="hero-actions" style="margin-top:32px">
+        <a href="/login.html" class="btn btn-primary btn-lg">Comenzar análisis</a>
         <a href="#features" class="btn btn-secondary btn-lg">Ver características</a>
       </div>
-      <div class="hero-stats">
-        <div class="hero-stat"><div class="num">4</div><div class="lbl">Dimensiones de análisis</div></div>
-        <div class="hero-stat"><div class="num">∞</div><div class="lbl">Expedientes</div></div>
-        <div class="hero-stat"><div class="num">E2E</div><div class="lbl">Encriptación</div></div>
-        <div class="hero-stat"><div class="num">24/7</div><div class="lbl">Disponible</div></div>
-      </div>
+      <div class="endoso" style="margin-top:56px;font-size:11px;letter-spacing:.3em;color:#4F5769;text-align:center">SOLUCIONES DIGITALES · CUARTO DE PAZ</div>
     </div>
   </section>
 
@@ -498,5 +569,31 @@
 
   <!-- Security: No inline scripts, all JS in external files with SRI -->
   <script src="js/landing.js" defer></script>
+<script>
+// Hero scroll-hide + navbar show
+(function(){
+  const hero = document.querySelector('.hero');
+  const navbar = document.getElementById('navbar');
+  if (!hero || !navbar) return;
+  let ticking = false;
+  window.addEventListener('scroll', function(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      const scrollY = window.scrollY;
+      const heroH = hero.offsetHeight;
+      // Hide hero after scrolling 30% of its height
+      if (scrollY > heroH * 0.3) {
+        hero.classList.add('hide');
+        navbar.classList.add('show');
+      } else {
+        hero.classList.remove('hide');
+        navbar.classList.remove('show');
+      }
+      ticking = false;
+    });
+  });
+})();
+</script>
 </body>
 </html>

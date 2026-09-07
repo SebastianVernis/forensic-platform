@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <title>Admin — Themis IA</title>
+  <link rel="icon" href="../assets/themis-ia_favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/global.css">
+  <style>
+    .admin-page{min-height:100vh;background:var(--bg-primary)}
+    .admin-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg-secondary);position:sticky;top:0;z-index:100}
+    .admin-header .logo{display:flex;align-items:center;gap:10px;font-family:Michroma,sans-serif;font-size:15px;letter-spacing:.12em}
+    .admin-header .logo img{height:28px}
+    .admin-header .ia{color:var(--accent)}
+    .admin-container{max-width:1200px;margin:0 auto;padding:24px}
+    .admin-title{font-size:24px;font-weight:700;margin-bottom:8px}
+    .admin-subtitle{color:var(--text-secondary);font-size:14px;margin-bottom:32px}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+    .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+    .stat-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .stat-card .value{font-size:28px;font-weight:800;color:var(--accent)}
+    .stat-card .sub{font-size:12px;color:var(--text-secondary);margin-top:4px}
+
+    .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:24px}
+    .tab{padding:10px 16px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s}
+    .tab:hover{color:var(--text-primary)}
+    .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+
+    .user-table{width:100%;border-collapse:collapse}
+    .user-table th{text-align:left;padding:10px 12px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--bg-secondary)}
+    .user-table td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border)}
+    .user-table tr:hover td{background:var(--bg-card)}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.03em}
+    .badge-admin{background:rgba(56,198,216,0.15);color:var(--accent)}
+    .badge-user{background:rgba(148,163,184,0.15);color:var(--text-secondary)}
+    .badge-active{background:rgba(34,197,94,0.15);color:#22c55e}
+    .badge-inactive{background:rgba(239,68,68,0.15);color:#ef4444}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-primary)}
+    .btn:hover{border-color:var(--text-muted);background:var(--bg-card)}
+    .btn-danger{color:#ef4444;border-color:rgba(239,68,68,0.3)}.btn-danger:hover{background:rgba(239,68,68,0.1)}
+    .btn-sm{padding:4px 8px;font-size:11px}
+    .actions{display:flex;gap:6px}
+
+    .toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:var(--radius-md);font-size:13px;z-index:9999;animation:slideIn 0.3s ease}
+    .toast-success{background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#22c55e}
+    .toast-error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+    .empty{text-align:center;padding:48px;color:var(--text-muted);font-size:14px}
+    .loading{text-align:center;padding:48px}
+    .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}.user-table{font-size:12px}.user-table th,.user-table td{padding:8px}}
+  </style>
+</head>
+<body>
+<div class="admin-page">
+  <header class="admin-header">
+    <a href="/" class="logo">
+      <img src="../assets/themis-ia_isotipo_mono-blanco.svg" alt="Themis IA">
+      <span>THEMIS <span class="ia">IA</span></span>
+    </a>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="admin-email" style="font-size:12px;color:var(--text-muted)"></span>
+      <a href="/pages/dashboard.html" class="btn btn-sm">← Dashboard</a>
+    </div>
+  </header>
+
+  <div class="admin-container">
+    <h1 class="admin-title">Panel de administración</h1>
+    <p class="admin-subtitle">Gestiona usuarios, roles y acceso a la plataforma.</p>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="label">Usuarios</div><div class="value" id="stat-users">—</div><div class="sub">Total registrados</div></div>
+      <div class="stat-card"><div class="label">Administradores</div><div class="value" id="stat-admins">—</div><div class="sub">Con acceso admin</div></div>
+      <div class="stat-card"><div class="label">Casos</div><div class="value" id="stat-cases">—</div><div class="sub">Total de casos</div></div>
+      <div class="stat-card"><div class="label">Suscripciones</div><div class="value" id="stat-subs">—</div><div class="sub">Activas</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="users">Usuarios</button>
+      <button class="tab" data-tab="recent">Últimos accesos</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-users">
+      <div id="users-loading" class="loading"><span class="spinner"></span></div>
+      <table class="user-table" id="users-table" style="display:none">
+        <thead>
+          <tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th>Registro</th><th>Último acceso</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="tab-panel" id="panel-recent">
+      <div id="recent-loading" class="loading"><span class="spinner"></span></div>
+      <table class="user-table" id="recent-table" style="display:none">
+        <thead>
+          <tr><th>Email</th><th>Nombre</th><th>Último acceso</th></tr>
+        </thead>
+        <tbody id="recent-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = location.origin;
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+function showToast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+async function apiCall(method, path, body) {
+  const opts = { method, credentials: 'same-origin' };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(API + path, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Error ' + r.status);
+  return data;
+}
+
+// Load stats
+async function loadStats() {
+  try {
+    const s = await apiCall('GET', '/api/admin/stats');
+    document.getElementById('stat-users').textContent = s.total_users;
+    document.getElementById('stat-admins').textContent = s.admin_users;
+    document.getElementById('stat-cases').textContent = s.total_cases;
+    document.getElementById('stat-subs').textContent = s.active_subscriptions;
+
+    // Recent logins
+    const tbody = document.getElementById('recent-tbody');
+    tbody.innerHTML = '';
+    (s.recent_logins || []).forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + u.email + '</td><td>' + (u.nombre || '—') + '</td><td>' + (u.last_login || '—') + '</td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('recent-loading').style.display = 'none';
+    document.getElementById('recent-table').style.display = 'table';
+  } catch (e) {
+    console.error('Stats error:', e);
+  }
+}
+
+// Load users
+async function loadUsers() {
+  try {
+    const data = await apiCall('GET', '/api/admin/users');
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = '';
+    (data.users || []).forEach(u => {
+      const tr = document.createElement('tr');
+      const isActive = u.email_verified;
+      tr.innerHTML = [
+        '<td><strong>' + (u.nombre || '—') + ' ' + (u.apellido || '') + '</strong></td>',
+        '<td>' + u.email + '</td>',
+        '<td><span class="badge badge-' + u.role + '">' + u.role + '</span></td>',
+        '<td><span class="badge badge-' + (isActive ? 'active' : 'inactive') + '">' + (isActive ? 'Activo' : 'Inactivo') + '</span></td>',
+        '<td>' + (u.created_at || '—') + '</td>',
+        '<td>' + (u.last_login || '—') + '</td>',
+        '<td class="actions">' +
+          (u.role === 'admin'
+            ? '<button class="btn btn-sm" onclick="changeRole(\'' + u.id + '\',\'user\')">Quitar admin</button>'
+            : '<button class="btn btn-sm" onclick="changeRole(\'' + u.id + '\',\'admin\')">Hacer admin</button>') +
+          (isActive
+            ? '<button class="btn btn-sm btn-danger" onclick="toggleStatus(\'' + u.id + '\',false)">Desactivar</button>'
+            : '<button class="btn btn-sm" onclick="toggleStatus(\'' + u.id + '\',true)">Activar</button>') +
+          '<button class="btn btn-sm btn-danger" onclick="deleteUser(\'' + u.id + '\',\'' + u.email + '\')">Eliminar</button>' +
+        '</td>'
+      ].join('');
+      tbody.appendChild(tr);
+    });
+    document.getElementById('users-loading').style.display = 'none';
+    document.getElementById('users-table').style.display = 'table';
+  } catch (e) {
+    console.error('Users error:', e);
+    document.getElementById('users-loading').innerHTML = '<p style="color:var(--danger)">' + e.message + '</p>';
+  }
+}
+
+async function changeRole(userId, role) {
+  if (!confirm('¿Cambiar rol a "' + role + '"?')) return;
+  try {
+    await apiCall('POST', '/api/admin/users/' + userId + '/role', { role });
+    showToast('Rol actualizado a ' + role, 'success');
+    loadUsers();
+    loadStats();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function toggleStatus(userId, active) {
+  const action = active ? 'activar' : 'desactivar';
+  if (!confirm('¿' + action.charAt(0).toUpperCase() + action.slice(1) + ' este usuario?')) return;
+  try {
+    await apiCall('POST', '/api/admin/users/' + userId + '/status', { active });
+    showToast('Usuario ' + (active ? 'activado' : 'desactivado'), 'success');
+    loadUsers();
+    loadStats();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteUser(userId, email) {
+  if (!confirm('¿Eliminar permanentemente a ' + email + '? Esta acción no se puede deshacer.')) return;
+  try {
+    await apiCall('DELETE', '/api/admin/users/' + userId);
+    showToast('Usuario eliminado', 'success');
+    loadUsers();
+    loadStats();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Init
+(async () => {
+  try {
+    const me = await apiCall('GET', '/api/auth/me');
+    if (me.role !== 'admin') {
+      document.querySelector('.admin-container').innerHTML = '<div class="empty"><h2>Acceso denegado</h2><p>No tienes permisos de administrador.</p><a href="/pages/dashboard.html" class="btn" style="margin-top:16px">← Volver al dashboard</a></div>';
+      return;
+    }
+    document.getElementById('admin-email').textContent = me.email || '';
+    loadStats();
+    loadUsers();
+  } catch (e) { location.href = '/pages/login.html'; }
+})();
+</script>
+</body>
+</html>
