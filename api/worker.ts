@@ -54,7 +54,7 @@ async function rateLimitMiddleware(c: any, key: string, max: number = 100, windo
 // POST /api/auth/register
 app.post('/api/auth/register', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') || 'unknown';
-  const rl = await rateLimitMiddleware(c, `register:${ip}`, 5, 900);
+  const rl = await rateLimitMiddleware(c, `register:${ip}`, 50, 900);
   if (rl) return rl;
 
   const body = await c.req.json();
@@ -368,10 +368,80 @@ app.post('/api/cases/:id/documents', async (c) => {
 app.post('/api/cases/:id/oracle', async (c) => {
   const session = await requireAuth(c);
   if (session instanceof Response) return session;
+  const caseId = c.req.param('id');
   const { question } = await c.req.json();
   if (!question) return c.json({ error: 'Pregunta requerida' }, 400);
-  // TODO: integrate with actual LLM
-  return c.json({ answer: 'Funcionalidad del oráculo pendiente de integración con el motor LLM.', sources: 'N/A' });
+
+  const cs = await c.env.DB.prepare('SELECT name, config_json FROM cases WHERE id=?').bind(caseId).first();
+  let slug = '';
+  try { slug = JSON.parse(cs?.config_json || '{}').pipeline === 'ana-ameli' ? 'ana-ameli' : 'lebaron'; } catch(e) {}
+
+  const summary = await c.env.DB.prepare('SELECT * FROM case_summaries WHERE case_id=?').bind(caseId).first();
+
+  let context = 'Caso: ' + (cs?.name || 'Sin nombre') + '\n\n';
+  if (summary) {
+    const stats = JSON.parse(summary.stats_json || '{}');
+    context += 'Estadisticas: ' + JSON.stringify(stats.graph || {}) + '\n';
+    context += 'Hallazgos: ' + JSON.stringify(stats.analysis || {}) + '\n';
+    const sevText = (summary.severity_report || '').replace(/<[^>]+>/g, ' ').substring(0, 2000);
+    context += '\nResumen de hallazgos:\n' + sevText + '\n';
+    const entText = (summary.entity_report || '').replace(/<[^>]+>/g, ' ').substring(0, 1000);
+    context += '\nEntidades principales:\n' + entText + '\n';
+  }
+
+  try {
+    const reportRes = await c.env.R2.get('cases/' + slug + '/reporte_forense.json');
+    if (reportRes) {
+      const report = JSON.parse(await reportRes.text());
+      const incs = (report.inconsistencias || []).slice(0, 5);
+      if (incs.length) {
+        context += '\nInconsistencias relevantes:\n';
+        for (const inc of incs) {
+          context += '- [' + (inc.id || '') + '] ' + (inc.descripcion || '').substring(0, 200) + '\n';
+        }
+      }
+    }
+  } catch(e) {}
+
+  const systemPrompt = 'Eres el Oraculo Forense de Themis IA. Responde preguntas sobre casos legales basandote unicamente en los datos proporcionados. Si no tienes informacion suficiente, di que no tienes datos. Responde en espanol, de manera concisa y profesional. Cita fuentes especificas cuando sea posible.';
+
+  let answer = '';
+  let sources = 'Datos del caso';
+
+  try {
+    const mimoRes = await fetch('https://token-plan-sgp.xiaomimimo.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.env.MIMO_API_KEY },
+      body: JSON.stringify({
+        model: 'mimo-v2.5-pro',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Contexto del caso:\n' + context + '\n\nPregunta: ' + question }
+        ],
+        max_tokens: 1500,
+        temperature: 0.3,
+      }),
+    });
+    if (mimoRes.ok) {
+      const mimoData = await mimoRes.json();
+      answer = mimoData.choices?.[0]?.message?.content || '';
+    } else { throw new Error('Mimo ' + mimoRes.status); }
+  } catch(e) {
+    try {
+      const ollamaRes = await fetch('https://ollama.com/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.env.OLLAMA_CLOUD_API_KEY },
+        body: JSON.stringify({ model: 'minimax-m3:cloud', messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Contexto del caso:\n' + context + '\n\nPregunta: ' + question }
+        ], stream: false }),
+      });
+      if (ollamaRes.ok) { const o = await ollamaRes.json(); answer = o.message?.content || ''; }
+    } catch(e2) {}
+  }
+
+  if (!answer) answer = 'No pude procesar la pregunta. Verifica la conexion con el motor LLM.';
+  return c.json({ answer, sources });
 });
 
 // ============================================================
@@ -534,6 +604,297 @@ async function requireSubscription(c: any) {
   return session;
 }
 
+
+// ============================================================
+// ADMIN — User Management
+// ============================================================
+
+// Helper: require admin role
+async function requireAdmin(c: any) {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+  const user = await c.env.DB.prepare('SELECT role FROM users WHERE id=?').bind(session.userId).first();
+  if (user?.role !== 'admin') return c.json({ error: 'Solo administradores' }, 403);
+  return session;
+}
+
+// GET /api/admin/users — List all users
+app.get('/api/admin/users', async (c) => {
+  const session = await requireAdmin(c);
+  if (session instanceof Response) return session;
+  const users = await c.env.DB.prepare(
+    'SELECT id,email,nombre,apellido,role,organizacion,created_at,last_login,email_verified FROM users ORDER BY created_at DESC'
+  ).all();
+  return c.json({ users: users.results });
+});
+
+// GET /api/admin/stats — Dashboard stats
+app.get('/api/admin/stats', async (c) => {
+  const session = await requireAdmin(c);
+  if (session instanceof Response) return session;
+  const totalUsers = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first();
+  const adminUsers = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE role="admin"').first();
+  const totalCases = await c.env.DB.prepare('SELECT COUNT(*) as count FROM cases').first();
+  const activeSubs = await c.env.DB.prepare('SELECT COUNT(*) as count FROM subscriptions WHERE status="active"').first();
+  const recentLogins = await c.env.DB.prepare(
+    'SELECT id,email,nombre,last_login FROM users WHERE last_login IS NOT NULL ORDER BY last_login DESC LIMIT 10'
+  ).all();
+  return c.json({
+    total_users: totalUsers?.count || 0,
+    admin_users: adminUsers?.count || 0,
+    total_cases: totalCases?.count || 0,
+    active_subscriptions: activeSubs?.count || 0,
+    recent_logins: recentLogins?.results || [],
+  });
+});
+
+// POST /api/admin/users/:id/role — Change user role
+app.post('/api/admin/users/:id/role', async (c) => {
+  const session = await requireAdmin(c);
+  if (session instanceof Response) return session;
+  const userId = c.req.param('id');
+  const body = await c.req.json();
+  const newRole = body.role;
+  if (!newRole || !['user', 'admin'].includes(newRole)) {
+    return c.json({ error: 'Rol inválido. Usa "user" o "admin".' }, 400);
+  }
+  // Prevent removing own admin role
+  if (userId === session.userId && newRole !== 'admin') {
+    return c.json({ error: 'No puedes quitarte el rol de administrador a ti mismo.' }, 400);
+  }
+  await c.env.DB.prepare('UPDATE users SET role=?, updated_at=datetime("now") WHERE id=?').bind(newRole, userId).run();
+  await logAudit(c.env.DB, session.userId, 'change_role', 'user', userId, { new_role: newRole });
+  return c.json({ ok: true, message: 'Rol actualizado a ' + newRole });
+});
+
+// POST /api/admin/users/:id/status — Activate/deactivate user
+app.post('/api/admin/users/:id/status', async (c) => {
+  const session = await requireAdmin(c);
+  if (session instanceof Response) return session;
+  const userId = c.req.param('id');
+  const body = await c.req.json();
+  // Prevent deactivating self
+  if (userId === session.userId) {
+    return c.json({ error: 'No puedes desactivarte a ti mismo.' }, 400);
+  }
+  const verified = body.active ? 1 : 0;
+  await c.env.DB.prepare('UPDATE users SET email_verified=?, updated_at=datetime("now") WHERE id=?').bind(verified, userId).run();
+  // Revoke all sessions if deactivating
+  if (!body.active) {
+    await c.env.DB.prepare('UPDATE sessions SET revoked=1 WHERE user_id=?').bind(userId).run();
+  }
+  await logAudit(c.env.DB, session.userId, body.active ? 'activate_user' : 'deactivate_user', 'user', userId);
+  return c.json({ ok: true, message: body.active ? 'Usuario activado' : 'Usuario desactivado' });
+});
+
+// DELETE /api/admin/users/:id — Delete user
+app.delete('/api/admin/users/:id', async (c) => {
+  const session = await requireAdmin(c);
+  if (session instanceof Response) return session;
+  const userId = c.req.param('id');
+  if (userId === session.userId) {
+    return c.json({ error: 'No puedes eliminarte a ti mismo.' }, 400);
+  }
+  await c.env.DB.prepare('DELETE FROM users WHERE id=?').bind(userId).run();
+  await logAudit(c.env.DB, session.userId, 'delete_user', 'user', userId);
+  return c.json({ ok: true, message: 'Usuario eliminado' });
+});
+
+
+// GET /api/cases/:id/data/:file — Serve forensic data from R2
+app.get('/api/cases/:id/data/:file', async (c) => {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+
+  const caseId = c.req.param('id');
+  const file = c.req.param('file');
+
+  // Verify user owns the case or is admin
+  const cs = await c.env.DB.prepare(
+    'SELECT owner_id FROM cases WHERE id=?'
+  ).bind(caseId).first();
+  if (!cs) return c.json({ error: 'Caso no encontrado' }, 404);
+
+  const user = await c.env.DB.prepare('SELECT role FROM users WHERE id=?').bind(session.userId).first();
+  if (cs.owner_id !== session.userId && user?.role !== 'admin') {
+    return c.json({ error: 'Sin acceso' }, 403);
+  }
+
+  // Map case ID to R2 path
+  const caseRow = await c.env.DB.prepare('SELECT config_json FROM cases WHERE id=?').bind(caseId).first();
+  let slug = '';
+  try {
+    const cfg = JSON.parse(caseRow?.config_json || '{}');
+    slug = cfg.pipeline === 'ana-ameli' ? 'ana-ameli' : 'lebaron';
+  } catch(e) {}
+
+  const r2Key = 'cases/' + slug + '/' + file;
+  const allowed = ['reporte_forense.json', 'graph_data.json', 'alias_map.json', 'case_profile.json', 'data_eer.json', 'fk_map.json'];
+  if (!allowed.includes(file)) return c.json({ error: 'Archivo no permitido' }, 403);
+
+  const obj = await c.env.R2.get(r2Key);
+  if (!obj) return c.json({ error: 'Archivo no encontrado' }, 404);
+
+  const data = await obj.text();
+  return new Response(data, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' }
+  });
+});
+
+
+// GET /api/cases/:id/summary — Generate or retrieve cached case summary
+app.get('/api/cases/:id/summary', async (c) => {
+  const session = await requireAuth(c);
+  if (session instanceof Response) return session;
+
+  const caseId = c.req.param('id');
+  const cs = await c.env.DB.prepare('SELECT owner_id, config_json FROM cases WHERE id=?').bind(caseId).first();
+  if (!cs) return c.json({ error: 'Caso no encontrado' }, 404);
+
+  const user = await c.env.DB.prepare('SELECT role FROM users WHERE id=?').bind(session.userId).first();
+  if (cs.owner_id !== session.userId && user?.role !== 'admin') {
+    return c.json({ error: 'Sin acceso' }, 403);
+  }
+
+  // Check cache
+  const cached = await c.env.DB.prepare('SELECT * FROM case_summaries WHERE case_id=?').bind(caseId).first();
+  if (cached) {
+    return c.json({
+      cached: true,
+      generated_at: cached.generated_at,
+      stats: JSON.parse(cached.stats_json || '{}'),
+      graph_summary: cached.graph_summary,
+      severity_report: cached.severity_report,
+      entity_report: cached.entity_report,
+    });
+  }
+
+  // Generate summary from R2 data
+  let slug = '';
+  try { slug = JSON.parse(cs.config_json || '{}').pipeline === 'ana-ameli' ? 'ana-ameli' : 'lebaron'; } catch(e) {}
+
+  const [reportRes, graphRes, profileRes, aliasRes] = await Promise.all([
+    c.env.R2.get('cases/' + slug + '/reporte_forense.json'),
+    c.env.R2.get('cases/' + slug + '/graph_data.json'),
+    c.env.R2.get('cases/' + slug + '/case_profile.json'),
+    c.env.R2.get('cases/' + slug + '/alias_map.json'),
+  ]);
+
+  const report = reportRes ? JSON.parse(await reportRes.text()) : {};
+  const graph = graphRes ? JSON.parse(await graphRes.text()) : {};
+  const profile = profileRes ? JSON.parse(await profileRes.text()) : {};
+  const aliasData = aliasRes ? JSON.parse(await aliasRes.text()) : {};
+
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
+  const inconsistencias = report.inconsistencias || [];
+  const incongruencias = report.incongruencias || [];
+  const discrepancias = report.discrepancias_declaracion_evidencia || [];
+  const trazabilidad = report.trazabilidad || {};
+
+  // === STATS ===
+  const groups = {};
+  for (const n of nodes) { groups[n.group || 'other'] = (groups[n.group || 'other'] || 0) + 1; }
+  const connMap = {};
+  for (const e of edges) { connMap[e.from] = (connMap[e.from] || 0) + 1; connMap[e.to] = (connMap[e.to] || 0) + 1; }
+  const topConnected = Object.entries(connMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const personasAlias = aliasData.personas || {};
+  const totalPersonas = Object.keys(personasAlias).length;
+  const totalMenciones = Object.values(personasAlias).reduce((s, p) => s + (p.menciones || 0), 0);
+
+  const stats = {
+    graph: { nodes: nodes.length, edges: edges.length, groups },
+    analysis: { inconsistencias: inconsistencias.length, incongruencias: incongruencias.length, discrepancias: discrepancias.length, trazabilidad: Object.keys(trazabilidad).length },
+    entities: { personas: totalPersonas, vehiculos: Object.keys(aliasData.vehiculos || {}).length, total_menciones: totalMenciones },
+    top_connected: topConnected.map(([name, count]) => ({ name, connections: count })),
+    profile: { jurisdiccion: profile.jurisdiccion, tipo_caso: profile.tipo_caso, subtipo: profile.subtipo_caso },
+  };
+
+  // === GRAPH SUMMARY ===
+  let graphSummary = '';
+  graphSummary += '<h3>Resumen del grafo relacional</h3>'; graphSummary += '<p>El grafo contiene <strong>' + nodes.length + ' nodos</strong> y <strong>' + edges.length + ' aristas</strong>.</p>';
+  graphSummary += '<h4>Distribucion por tipo:</h4><ul>';
+  for (const [g, count] of Object.entries(groups)) {
+    graphSummary += '<li>' + g + ': ' + count + ' nodos</li>';
+  }
+  graphSummary += '</ul><h4>Entidades mas conectadas:</h4><ul>';
+  for (const [name, count] of topConnected.slice(0, 5)) {
+    graphSummary += '<li><strong>' + resolveAlias(name) + '</strong>: ' + count + ' conexiones</li>';
+  }
+  graphSummary += '</ul><h4>Relaciones identificadas:</h4><ul>';
+  const relTypes = {};
+  for (const e of edges) { relTypes[e.label || 'relacionado'] = (relTypes[e.label || 'relacionado'] || 0) + 1; }
+  for (const [rel, count] of Object.entries(relTypes).sort((a,b) => b[1]-a[1])) {
+    graphSummary += '<li>' + rel + ': ' + count + ' aristas</li>';
+  }
+
+  // === DESSEUDONIMIZATION MAP ===
+  const aliasToReal = {};
+  for (const [cat, entries] of Object.entries(aliasData)) {
+    if (typeof entries !== 'object') continue;
+    for (const [alias, info] of Object.entries(entries)) {
+      if (info && info.nombre_real) aliasToReal[alias] = info.nombre_real;
+    }
+  }
+  function resolveAlias(s) {
+    if (!s || typeof s !== 'string') return s;
+    return s.replace(/PERSONA_\d+/g, m => aliasToReal[m] || m)
+            .replace(/VEHICULO_\d+/g, m => aliasToReal[m] || m)
+            .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function resolveArray(arr) {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map(item => aliasToReal[item] || item);
+  }
+
+  graphSummary += '</ul>';
+
+  // === SEVERITY REPORT ===
+  const allFindings = [
+    ...inconsistencias.map(i => ({ ...i, category: 'inconsistencia' })),
+    ...incongruencias.map(i => ({ ...i, category: 'incongruencia' })),
+    ...discrepancias.map(i => ({ ...i, category: 'discrepancia' })),
+  ];
+  const severityOrder = { alta: 0, media: 1, baja: 2 };
+  allFindings.sort((a, b) => (severityOrder[a.severidad] ?? 3) - (severityOrder[b.severidad] ?? 3));
+
+  let severityReport = '<h3>Hallazgos por gravedad</h3>';
+  const bySeverity = { alta: [], media: [], baja: [] };
+  for (const f of allFindings) { (bySeverity[f.severidad] || bySeverity.baja).push(f); }
+  for (const [sev, items] of Object.entries(bySeverity)) {
+    if (items.length === 0) continue;
+    const icon = sev === 'alta' ? '\u{1F534}' : sev === 'media' ? '\u{1F7E1}' : '\u{1F7E2}';
+    severityReport += '<h4>' + icon + ' ' + sev.toUpperCase() + ' (' + items.length + ')</h4><ul>';
+    for (const item of items) {
+      severityReport += '<li><strong>[' + item.category + '] ' + (item.id || '') + '</strong><br>';
+      severityReport += '<p>' + resolveAlias(item.descripcion || item.description || '') + '</p>';
+      if (item.personas_involucradas) severityReport += '<p><em>Personas: ' + resolveArray(item.personas_involucradas).join(', ') + '</em></p></li>';
+    }
+    severityReport += '</ul>';
+  }
+
+  // === ENTITY REPORT ===
+  let entityReport = '<h3>Entidades principales</h3>';
+  const topPersonas = Object.entries(personasAlias).sort((a,b) => (b[1].menciones||0) - (a[1].menciones||0)).slice(0, 15);
+  entityReport += '<h4>Personas mas mencionadas:</h4><ul>';
+  for (const [aliasName, data] of topPersonas) {
+    entityReport += '<li><strong>' + ((data.nombre_real || aliasName).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()) + '</strong>: ' + (data.menciones || 0) + ' menciones en ' + (data.archivos || []).length + ' archivos</li>';
+  }
+  entityReport += '</ul><h4>Trazabilidad (' + Object.keys(trazabilidad).length + ' entidades):</h4><ul>';
+  for (const [entity, trace] of Object.entries(trazabilidad).slice(0, 10)) {
+    const roles = typeof trace === 'object' ? Object.keys(trace).join(', ') : String(trace);
+    entityReport += '<li><strong>' + resolveAlias(entity) + '</strong>: ' + roles + '</li>';
+  }
+  entityReport += '</ul>';
+
+  // Save to D1
+  await c.env.DB.prepare(
+    'INSERT OR REPLACE INTO case_summaries (case_id, stats_json, graph_summary, severity_report, entity_report, generated_at) VALUES (?,?,?,?,?,datetime("now"))'
+  ).bind(caseId, JSON.stringify(stats), graphSummary, severityReport, entityReport).run();
+
+  return c.json({ cached: false, generated_at: new Date().toISOString(), stats, graph_summary: graphSummary, severity_report: severityReport, entity_report: entityReport });
+});
+
 // ============================================================
 // HEALTH
 // ============================================================
@@ -550,8 +911,8 @@ app.onError((err, c) => {
 // FALLBACK: serve static assets
 // ============================================================
 
-app.all('*', async (c) => {
-  return c.json({ error: 'Not found' }, 404);
-});
+// Static assets are served automatically by Workers Static Assets binding.
+// If no API route matched, the request falls through to [assets] in wrangler.toml.
+// No catch-all needed — removing app.all('*') lets the assets binding work.
 
 export default app;

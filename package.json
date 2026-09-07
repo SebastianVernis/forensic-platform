@@ -4,7 +4,12 @@
   "description": "Motor de análisis forense de propósito general para expedientes legales. Ingiere documentos de cualquier caso (`.txt`, `.pdf`, imágenes), seudonimiza entidades, analiza con LLM, y genera reportes con hallazgos estructurados.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:debug": "npx playwright test --debug",
+    "test:e2e:report": "npx playwright show-report e2e-report"
   },
   "repository": {
     "type": "git",
@@ -21,6 +26,7 @@
     "hono": "^4.13.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260902.1"
+    "@cloudflare/workers-types": "^5.20260902.1",
+    "@playwright/test": "^1.63.0"
   }
 }
